@@ -86,12 +86,6 @@ public final class MySqlConnectorTask extends BaseSourceTask {
                     if (taskContext.isSchemaOnlyRecoverySnapshot()) {
                         startWithSnapshot = true;
 
-                        // But check to see if the server still has those binlog coordinates ...
-                        if (!isBinlogAvailable()) {
-                            String msg = "The connector is trying to read binlog starting at " + source + ", but this is no longer "
-                                    + "available on the server. Reconfigure the connector to use a snapshot when needed.";
-                            throw new ConnectException(msg);
-                        }
                         logger.info("The db-history topic is missing but we are in {} snapshot mode. " +
                                     "Attempting to snapshot the current schema and then begin reading the binlog from the last recorded offset.", SnapshotMode.SCHEMA_ONLY_RECOVERY);
                     } else {
@@ -118,16 +112,6 @@ public final class MySqlConnectorTask extends BaseSourceTask {
                     } else {
                         // No snapshot was in effect, so we should just start reading from the binlog ...
                         startWithSnapshot = false;
-
-                        // But check to see if the server still has those binlog coordinates ...
-                        if (!isBinlogAvailable()) {
-                            if (!taskContext.isSnapshotAllowedWhenNeeded()) {
-                                String msg = "The connector is trying to read binlog starting at " + source + ", but this is no longer "
-                                        + "available on the server. Reconfigure the connector to use a snapshot when needed.";
-                                throw new ConnectException(msg);
-                            }
-                            startWithSnapshot = true;
-                        }
                     }
                 }
 
@@ -465,73 +449,6 @@ public final class MySqlConnectorTask extends BaseSourceTask {
             logger.info("Connector task finished all work and is now shutdown");
             prevLoggingContext.restore();
         }
-    }
-
-    /**
-     * Determine whether the binlog position as set on the {@link MySqlTaskContext#source() SourceInfo} is available in the
-     * server.
-     *
-     * @return {@code true} if the server has the binlog coordinates, or {@code false} otherwise
-     */
-    protected boolean isBinlogAvailable() {
-        String gtidStr = taskContext.source().gtidSet();
-        /*
-        if (gtidStr != null) {
-            if (gtidStr.trim().isEmpty()) {
-                return true; // start at beginning ...
-            }
-            String availableGtidStr = connectionContext.knownGtidSet();
-            if (availableGtidStr == null || availableGtidStr.trim().isEmpty()) {
-                // Last offsets had GTIDs but the server does not use them ...
-                logger.info("Connector used GTIDs previously, but MySQL does not know of any GTIDs or they are not enabled");
-                return false;
-            }
-            // GTIDs are enabled, and we used them previously, but retain only those GTID ranges for the allowed source UUIDs ...
-            GtidSet gtidSet = new GtidSet(gtidStr).retainAll(taskContext.gtidSourceFilter());
-            // Get the GTID set that is available in the server ...
-            GtidSet availableGtidSet = new GtidSet(availableGtidStr);
-            if (gtidSet.isContainedWithin(availableGtidSet)) {
-                logger.info("MySQL current GTID set {} does contain the GTID set required by the connector {}", availableGtidSet, gtidSet);
-                return true;
-            }
-            logger.info("Connector last known GTIDs are {}, but MySQL has {}", gtidSet, availableGtidSet);
-            return false;
-        }*/
-
-        String binlogFilename = taskContext.source().binlogFilename();
-        if (binlogFilename == null) {
-            return true; // start at current position
-        }
-        if (binlogFilename.equals("")) {
-            return true; // start at beginning
-        }
-
-        // Accumulate the available binlog filenames ...
-        List<String> logNames = new ArrayList<>();
-        try {
-            logger.info("Step 0: Get all known binlogs from MySQL");
-            connectionContext.jdbc().query("SHOW BINARY LOGS", rs -> {
-                while (rs.next()) {
-                    logNames.add(rs.getString(1));
-                }
-            });
-        }
-        catch (SQLException e) {
-            throw new ConnectException("Unexpected error while connecting to MySQL and looking for binary logs: ", e);
-        }
-
-        // And compare with the one we're supposed to use ...
-        boolean found = logNames.stream().anyMatch(binlogFilename::equals);
-        if (!found) {
-            if (logger.isInfoEnabled()) {
-                logger.info("Connector requires binlog file '{}', but MySQL only has {}", binlogFilename, String.join(", ", logNames));
-            }
-        }
-        else {
-            logger.info("MySQL has the binlog file '{}' required by the connector", binlogFilename);
-        }
-
-        return found;
     }
 
     /**
