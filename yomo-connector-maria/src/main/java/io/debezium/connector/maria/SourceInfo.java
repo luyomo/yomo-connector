@@ -5,9 +5,12 @@
  */
 package io.debezium.connector.maria;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
@@ -416,7 +419,7 @@ final class SourceInfo extends AbstractSourceInfo {
     }
 
     public void commitTransaction() {
-        this.restartGtidSet = this.currentGtid;
+        this.restartGtidSet = this.currentGtidSet;
         this.restartBinlogFilename = this.currentBinlogFilename;
         this.restartBinlogPosition = this.currentBinlogPosition + this.currentEventLengthInBytes;
         this.restartRowsToSkip = 0;
@@ -433,6 +436,7 @@ final class SourceInfo extends AbstractSourceInfo {
      */
     public void startGtid(String gtid, String gtidSet) {
         this.currentGtid = gtid;
+        this.updateGtidSet(gtid);
         if (gtidSet != null && !gtidSet.trim().isEmpty()) {
             // Remove all the newline chars that exist in the GTID set string ...
             String trimmedGtidSet = gtidSet.replaceAll("\n", "").replaceAll("\r", "");
@@ -627,6 +631,26 @@ final class SourceInfo extends AbstractSourceInfo {
             return ((Boolean) obj).booleanValue();
         }
         return Boolean.parseBoolean(obj.toString());
+    }
+
+    private void updateGtidSet(String gtid) {
+      if(gtid == null) return;
+
+      if(currentGtidSet == null ) currentGtidSet = gtid;
+
+      // currentGtidSet:  1-123456-10,2-123456-9 => {1 -> 1-123456-10, 2-> 2-123456-9}
+      Map<Integer, String> gtidList = new LinkedHashMap<Integer, String>();
+
+      Stream.of(currentGtidSet.split(",")).forEach(elem -> {
+          String[] splitGtid = new String(elem).split("-");
+          gtidList.put(Integer.parseInt(splitGtid[0]), elem);
+      });
+
+      // gtid: 1-12345-11    {1 -> 123456-10, 2 -> 2-123456-9} =>  {1 -> 123456-11, 2 -> 2-123456-9}
+      gtidList.put(Integer.parseInt(gtid.split("-")[0]), gtid);
+
+      // {1 -> 123456-11, 2 -> 2-123456-9} => 1-12345-11,2-123456-9
+      this.currentGtidSet = String.join(",", new ArrayList<String>(gtidList.values()));
     }
 
     /**

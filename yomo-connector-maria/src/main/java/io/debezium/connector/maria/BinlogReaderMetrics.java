@@ -57,7 +57,7 @@ class BinlogReaderMetrics extends Metrics implements BinlogReaderMetricsMXBean {
 
     @Override
     public String getGtidSet() {
-        return this.client.getGtid();
+        return this.client.getGtidList();
     }
 
     @Override

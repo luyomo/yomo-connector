@@ -337,7 +337,7 @@ public class BinlogReader extends AbstractReader {
                 // We've not yet seen any GTIDs, so that means we have to start reading the binlog from the beginning ...
                 client.setBinlogFilename(source.binlogFilename());
                 client.setBinlogPosition(source.binlogPosition());
-                client.setGtid(source.getRestartGtids());
+                client.setGtidList(source.getRestartGtids());
                 //gtidSet = new com.github.yomo.maria.binlog.GtidSet("");
             //}
         } else {
