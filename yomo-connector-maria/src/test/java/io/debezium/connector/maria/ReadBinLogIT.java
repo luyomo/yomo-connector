@@ -5,8 +5,10 @@
  */
 package io.debezium.connector.maria;
 
-import static org.junit.Assert.fail;
-
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
+import org.testng.Assert;
 import java.io.IOException;
 import java.io.Serializable;
 import java.sql.SQLException;
@@ -23,10 +25,6 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,8 +69,8 @@ public class ReadBinLogIT implements Testing {
 
     private final UniqueDatabase DATABASE = new UniqueDatabase("readbinlog_it", "readbinlog_test");
 
-    @Before
-    public void beforeEach() throws TimeoutException, IOException, SQLException, InterruptedException {
+    @BeforeMethod
+	public void beforeEach() throws TimeoutException, IOException, SQLException, InterruptedException {
         events.clear();
 
         // Connect the normal SQL client ...
@@ -84,8 +82,8 @@ public class ReadBinLogIT implements Testing {
         config = conn.config();
     }
 
-    @After
-    public void afterEach() throws IOException, SQLException {
+    @AfterMethod
+	public void afterEach() throws IOException, SQLException {
         events.clear();
         try {
             if (client != null) {
@@ -138,8 +136,8 @@ public class ReadBinLogIT implements Testing {
         counters.reset();
     }
     
-    @Ignore
-    @Test( expected = ServerException.class)
+    @Test(enabled = false)
+	@Test( expected = ServerException.class)
     public void shouldFailToConnectToInvalidBinlogFile() throws Exception {
         Testing.Print.enable();
         startClient(client -> {
@@ -148,8 +146,8 @@ public class ReadBinLogIT implements Testing {
     }
 
 
-    @Ignore
-    @Test
+    @Test(enabled = false)
+	@Test
     public void shouldReadMultipleBinlogFiles() throws Exception {
         Testing.Print.enable();
         startClient(client -> {
@@ -267,8 +265,8 @@ public class ReadBinLogIT implements Testing {
      * 
      * @throws Exception if there are problems
      */
-    @Ignore
-    @Test
+    @Test(enabled = false)
+	@Test
     public void shouldCaptureQueryEventData() throws Exception {
         // Testing.Print.enable();
         startClient(client -> {
@@ -455,7 +453,7 @@ public class ReadBinLogIT implements Testing {
         assertThat(eventData.getRows().size()).isEqualTo(rows.rows().size());
         for (Map.Entry<Serializable[], Serializable[]> row : eventData.getRows()) {
             if (!rows.findUpdatedRow(row.getKey(), row.getValue())) {
-                fail("Failed to find updated row: " + eventData);
+                Assert.fail("Failed to find updated row: " + eventData);
             }
         }
     }
@@ -464,7 +462,7 @@ public class ReadBinLogIT implements Testing {
         assertThat(eventData.getRows().size()).isEqualTo(rows.rows().size());
         for (Serializable[] removedRow : eventData.getRows()) {
             if (!rows.findInsertedRow(removedRow)) {
-                fail("Failed to find inserted row: " + eventData);
+                Assert.fail("Failed to find inserted row: " + eventData);
             }
         }
     }
@@ -473,7 +471,7 @@ public class ReadBinLogIT implements Testing {
         assertThat(eventData.getRows().size()).isEqualTo(rows.rows().size());
         for (Serializable[] removedRow : eventData.getRows()) {
             if (!rows.findDeletedRow(removedRow)) {
-                fail("Failed to find removed row: " + eventData);
+                Assert.fail("Failed to find removed row: " + eventData);
             }
         }
     }

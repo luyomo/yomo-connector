@@ -5,10 +5,9 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
 import io.debezium.doc.FixFor;
-import org.junit.Before;
-import org.junit.Test;
-
 import static org.fest.assertions.Assertions.assertThat;
 
 import io.debezium.relational.TableId;
@@ -21,8 +20,8 @@ public class FiltersTest {
     private Configurator build;
     private Filters filters;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         build = new Configurator();
         filters = null;
     }

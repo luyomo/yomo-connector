@@ -5,9 +5,11 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
+import org.testng.Assert;
 import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.fail;
-
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -15,10 +17,6 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.apache.kafka.connect.data.Struct;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.debezium.config.Configuration;
 import io.debezium.data.Envelope;
 import io.debezium.doc.FixFor;
@@ -36,16 +34,16 @@ public class MySqlConnectorJsonIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         stopConnector();
         DATABASE.createAndInitialize();
         initializeConnectorTestFramework();
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @After
-    public void afterEach() {
+    @AfterMethod
+	public void afterEach() {
         try {
             stopConnector();
         } finally {
@@ -98,7 +96,7 @@ public class MySqlConnectorJsonIT extends AbstractConnectorTest {
             }
         });
         if (!errors.isEmpty()) {
-            fail("" + errors.size() + " errors with JSON records..." + System.lineSeparator() +
+            Assert.fail("" + errors.size() + " errors with JSON records..." + System.lineSeparator() +
                  String.join(System.lineSeparator(), errors));
         }
     }
@@ -148,7 +146,7 @@ public class MySqlConnectorJsonIT extends AbstractConnectorTest {
             }
         });
         if (!errors.isEmpty()) {
-            fail("" + errors.size() + " errors with JSON records..." + System.lineSeparator() +
+            Assert.fail("" + errors.size() + " errors with JSON records..." + System.lineSeparator() +
                  String.join(System.lineSeparator(), errors));
         }
     }

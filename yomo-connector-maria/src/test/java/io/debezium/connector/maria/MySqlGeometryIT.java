@@ -5,6 +5,10 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
+import org.testng.AssertJUnit;
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.nio.file.Path;
@@ -14,11 +18,6 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.apache.kafka.connect.data.Struct;
 import org.fest.assertions.Delta;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.debezium.config.Configuration;
 import io.debezium.connector.maria.MySQLConnection.MySqlVersion;
 import io.debezium.data.Envelope;
@@ -40,8 +39,8 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         stopConnector();
         databaseDifferences = databaseGeoDifferences(MySQLConnection.forTestDatabase("emptydb").getMySqlVersion());
 
@@ -53,8 +52,8 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @After
-    public void afterEach() {
+    @AfterMethod
+	public void afterEach() {
         try {
             stopConnector();
         } finally {
@@ -173,7 +172,7 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
                     .get("wkb")));
             databaseDifferences.geometryAssertPoints(expectedX, expectedY, point.getX(), point.getY());
         } else if (expectedX != null) {
-            Assert.fail("Got a null geometry but didn't expect to");
+            AssertJUnit.fail("Got a null geometry but didn't expect to");
         }
     }
 

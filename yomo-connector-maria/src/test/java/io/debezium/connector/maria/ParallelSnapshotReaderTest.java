@@ -5,6 +5,8 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.Test;
+import org.testng.AssertJUnit;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,9 +20,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.kafka.connect.source.SourceRecord;
-import org.junit.Assert;
-import org.junit.Test;
-
 import io.debezium.connector.maria.ParallelSnapshotReader.ParallelHaltingPredicate;
 
 /**
@@ -38,7 +37,7 @@ public class ParallelSnapshotReaderTest {
 
         parallelSnapshotReader.start();
 
-        Assert.assertSame(parallelSnapshotReader.state(), Reader.State.RUNNING);
+        AssertJUnit.assertSame(parallelSnapshotReader.state(), Reader.State.RUNNING);
 
         verify(mockOldBinlogReader).start();
         verify(mockNewSnapshotReader).start();
@@ -70,9 +69,9 @@ public class ParallelSnapshotReaderTest {
 
         List<SourceRecord> parallelRecords = parallelSnapshotReader.poll();
 
-        Assert.assertEquals(2, parallelRecords.size());
-        Assert.assertTrue(parallelRecords.contains(oldBinlogSourceRecord));
-        Assert.assertTrue(parallelRecords.contains(newSnapshotSourceRecord));
+        AssertJUnit.assertEquals(2, parallelRecords.size());
+        AssertJUnit.assertTrue(parallelRecords.contains(oldBinlogSourceRecord));
+        AssertJUnit.assertTrue(parallelRecords.contains(newSnapshotSourceRecord));
     }
 
     @Test
@@ -98,8 +97,8 @@ public class ParallelSnapshotReaderTest {
 
         List<SourceRecord> parallelRecords = parallelSnapshotReader.poll();
 
-        Assert.assertEquals(1, parallelRecords.size());
-        Assert.assertTrue(parallelRecords.contains(newSnapshotSourceRecord));
+        AssertJUnit.assertEquals(1, parallelRecords.size());
+        AssertJUnit.assertTrue(parallelRecords.contains(newSnapshotSourceRecord));
     }
 
     // this test and the next don't appear to be halting. Something with the chained reader maybe.
@@ -122,8 +121,8 @@ public class ParallelSnapshotReaderTest {
 
         List<SourceRecord> parallelRecords = parallelSnapshotReader.poll();
 
-        Assert.assertEquals(1, parallelRecords.size());
-        Assert.assertTrue(parallelRecords.contains(oldBinlogSourceRecord));
+        AssertJUnit.assertEquals(1, parallelRecords.size());
+        AssertJUnit.assertTrue(parallelRecords.contains(oldBinlogSourceRecord));
     }
 
     @Test
@@ -143,7 +142,7 @@ public class ParallelSnapshotReaderTest {
 
         List<SourceRecord> parallelRecords = parallelSnapshotReader.poll();
 
-        Assert.assertEquals(null, parallelRecords);
+        AssertJUnit.assertEquals(null, parallelRecords);
     }
 
     @Test
@@ -157,7 +156,7 @@ public class ParallelSnapshotReaderTest {
         parallelSnapshotReader.start();
         parallelSnapshotReader.stop();
 
-        Assert.assertTrue(parallelSnapshotReader.state() == Reader.State.STOPPED);
+        AssertJUnit.assertTrue(parallelSnapshotReader.state() == Reader.State.STOPPED);
 
         verify(mockOldBinlogReader).stop();
         verify(mockNewSnapshotReader).stop();
@@ -178,10 +177,10 @@ public class ParallelSnapshotReaderTest {
 
         boolean testResult = parallelHaltingPredicate.accepts(createSourceRecordWithTimestamp(Instant.now().minus(duration.multipliedBy(2))));
 
-        Assert.assertTrue(testResult);
+        AssertJUnit.assertTrue(testResult);
 
-        Assert.assertFalse(thisReaderNearEnd.get());
-        Assert.assertFalse(otherReaderNearEnd.get());
+        AssertJUnit.assertFalse(thisReaderNearEnd.get());
+        AssertJUnit.assertFalse(otherReaderNearEnd.get());
     }
 
     @Test
@@ -199,10 +198,10 @@ public class ParallelSnapshotReaderTest {
 
         boolean testResult = parallelHaltingPredicate.accepts(createSourceRecordWithTimestamp(Instant.now()));
 
-        Assert.assertTrue(testResult);
+        AssertJUnit.assertTrue(testResult);
 
-        Assert.assertTrue(thisReaderNearEnd.get());
-        Assert.assertFalse(otherReaderNearEnd.get());
+        AssertJUnit.assertTrue(thisReaderNearEnd.get());
+        AssertJUnit.assertFalse(otherReaderNearEnd.get());
     }
 
     @Test
@@ -221,10 +220,10 @@ public class ParallelSnapshotReaderTest {
         boolean testResult =
             parallelHaltingPredicate.accepts(createSourceRecordWithTimestamp(Instant.now()));
 
-        Assert.assertFalse(testResult);
+        AssertJUnit.assertFalse(testResult);
 
-        Assert.assertTrue(thisReaderNearEnd.get());
-        Assert.assertTrue(otherReaderNearEnd.get());
+        AssertJUnit.assertTrue(thisReaderNearEnd.get());
+        AssertJUnit.assertTrue(otherReaderNearEnd.get());
     }
 
     /**

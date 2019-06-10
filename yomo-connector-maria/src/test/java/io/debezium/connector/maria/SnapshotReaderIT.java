@@ -5,10 +5,12 @@
  */
 package io.debezium.connector.maria;
 
+import static org.testng.AssertJUnit.assertArrayEquals;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
+import org.testng.Assert;
 import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.fail;
-
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -21,10 +23,6 @@ import java.util.function.Function;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.debezium.config.Configuration;
 import io.debezium.data.KeyValueStore;
 import io.debezium.data.KeyValueStore.Collection;
@@ -49,16 +47,16 @@ public class SnapshotReaderIT {
     private SnapshotReader reader;
     private CountDownLatch completed;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         Testing.Files.delete(DB_HISTORY_PATH);
         DATABASE.createAndInitialize();
         OTHER_DATABASE.createAndInitialize();
         completed = new CountDownLatch(1);
     }
 
-    @After
-    public void afterEach() {
+    @AfterMethod
+	public void afterEach() {
         if (reader != null) {
             try {
                 reader.stop();
@@ -179,7 +177,7 @@ public class SnapshotReaderIT {
             // completed the snapshot ...
             Testing.print("completed the snapshot");
         } else {
-            fail("failed to complete the snapshot within 10 seconds");
+            Assert.fail("failed to complete the snapshot within 10 seconds");
         }
     }
 
@@ -279,7 +277,7 @@ public class SnapshotReaderIT {
             // completed the snapshot ...
             Testing.print("completed the snapshot");
         } else {
-            fail("failed to complete the snapshot within 10 seconds");
+            Assert.fail("failed to complete the snapshot within 10 seconds");
         }
     }
 
@@ -382,11 +380,11 @@ public class SnapshotReaderIT {
             // completed the snapshot ...
             Testing.print("completed the snapshot");
         } else {
-            fail("failed to complete the snapshot within 10 seconds");
+            Assert.fail("failed to complete the snapshot within 10 seconds");
         }
     }
 
-    @Test(expected = ConnectException.class)
+    @Test(expectedExceptions = ConnectException.class)
     public void shouldCreateSnapshotSchemaOnlyRecovery_exception() throws Exception {
         config = simpleConfig().with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.SCHEMA_ONLY_RECOVERY).build();
         context = new MySqlTaskContext(config, new Filters.Builder(config).build());
@@ -455,7 +453,7 @@ public class SnapshotReaderIT {
             // completed the snapshot ...
             Testing.print("completed the snapshot");
         } else {
-            fail("failed to complete the snapshot within 10 seconds");
+            Assert.fail("failed to complete the snapshot within 10 seconds");
         }
     }
 
@@ -583,7 +581,7 @@ public class SnapshotReaderIT {
             Testing.print("completed the snapshot");
         }
         else {
-            fail("failed to complete the snapshot within 10 seconds");
+            Assert.fail("failed to complete the snapshot within 10 seconds");
         }
     }
 

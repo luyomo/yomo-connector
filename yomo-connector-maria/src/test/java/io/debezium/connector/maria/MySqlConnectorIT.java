@@ -5,8 +5,12 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
+import org.testng.Assert;
 import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.testng.Assert.fail;
 
 import java.nio.file.Path;
 import java.sql.ResultSet;
@@ -23,10 +27,6 @@ import org.apache.kafka.common.config.Config;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.debezium.config.CommonConnectorConfig;
 import io.debezium.config.Configuration;
 import io.debezium.connector.maria.MySqlConnectorConfig.SecureConnectionMode;
@@ -60,8 +60,8 @@ public class MySqlConnectorIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         stopConnector();
         DATABASE.createAndInitialize();
         RO_DATABASE.createAndInitialize();
@@ -69,8 +69,8 @@ public class MySqlConnectorIT extends AbstractConnectorTest {
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @After
-    public void afterEach() {
+    @AfterMethod
+	public void afterEach() {
         try {
             stopConnector();
         } finally {
@@ -765,7 +765,7 @@ public class MySqlConnectorIT extends AbstractConnectorTest {
         if (inserts == null) {
             updates = records.recordsForTopic(DATABASE.topicForTable("products_on_hand"));
             if (updates != null) {
-                fail("Restarted connector and missed the insert of product id=3003!");
+                Assert.fail("Restarted connector and missed the insert of product id=3003!");
             }
         }
         // Read the first record produced since we've restarted

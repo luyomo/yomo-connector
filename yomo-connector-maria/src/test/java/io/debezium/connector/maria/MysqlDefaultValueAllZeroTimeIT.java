@@ -5,6 +5,9 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.nio.file.Path;
@@ -17,10 +20,6 @@ import java.util.Collections;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.source.SourceRecord;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.debezium.config.Configuration;
 import io.debezium.embedded.AbstractConnectorTest;
 import io.debezium.time.Timestamp;
@@ -38,16 +37,16 @@ public class MysqlDefaultValueAllZeroTimeIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         stopConnector();
         DATABASE.createAndInitialize(Collections.singletonMap("sessionVariables", "sql_mode=''"));
         initializeConnectorTestFramework();
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @After
-    public void afterEach() {
+    @AfterMethod
+	public void afterEach() {
         try {
             stopConnector();
         } finally {

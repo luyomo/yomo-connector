@@ -5,13 +5,13 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
 import java.nio.file.Path;
 
 import org.apache.kafka.connect.data.Schema;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.rules.TestRule;
 
 import io.debezium.config.Configuration;
@@ -36,16 +36,16 @@ public class MySqlEnumColumnIT extends AbstractConnectorTest {
     @Rule
     public final TestRule skip = new SkipTestForLegacyParser();
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         stopConnector();
         DATABASE.createAndInitialize();
         initializeConnectorTestFramework();
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @After
-    public void afterEach() {
+    @AfterMethod
+	public void afterEach() {
         try {
             stopConnector();
         }

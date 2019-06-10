@@ -14,9 +14,11 @@ import java.nio.file.Paths;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.ResourceBundle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -117,7 +119,15 @@ public class UniqueDatabase {
      * See fnDbz162 procedure in reqression_test.sql for example of usage.
      */
     public void createAndInitialize() {
-        createAndInitialize(Collections.emptyMap());
+    	Map<String, Object> emptymap = new HashMap<String, Object>();
+    	ResourceBundle bundle = ResourceBundle.getBundle("jdbc");
+    	String prefix = "jdbc.mysql.replication.";
+
+    	if (bundle.getString(prefix + "database.hostname"     ) != null) emptymap.put("hostname", bundle.getString(prefix + "database.hostname"));
+    	if (bundle.getString(prefix + "database.port"         ) != null) emptymap.put("port"    , bundle.getString(prefix + "database.port"));
+    	if (bundle.getString(prefix + "database.superUsername") != null) emptymap.put("user"    , bundle.getString(prefix + "database.superUsername"));
+    	if (bundle.getString(prefix + "database.superPassword") != null) emptymap.put("password", bundle.getString(prefix + "database.superPassword"));
+        createAndInitialize(emptymap);
     }
 
     /**
@@ -149,6 +159,19 @@ public class UniqueDatabase {
                        .map(x -> x.replace("$$", ";"))
                        .collect(Collectors.toList());
                 connection.execute(statements.toArray(new String[statements.size()]));
+            }
+        } catch (final Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+    
+    /**
+     * Drop the created database
+     */
+    public void dropDB(Map<String, Object> urlProperties) {
+    	try {
+            try (MySQLConnection connection = MySQLConnection.forTestDatabase(DEFAULT_DATABASE, urlProperties)) {
+                connection.execute("drop database " + this.databaseName );
             }
         } catch (final Exception e) {
             throw new IllegalStateException(e);

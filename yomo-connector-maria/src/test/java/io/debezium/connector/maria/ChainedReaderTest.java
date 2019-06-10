@@ -5,6 +5,8 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.Test;
+import org.testng.AssertJUnit;
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.util.Iterator;
@@ -14,9 +16,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.apache.kafka.connect.source.SourceRecord;
-import org.junit.Assert;
-import org.junit.Test;
-
 import io.debezium.config.ConfigurationDefaults;
 import io.debezium.connector.maria.Reader.State;
 import io.debezium.util.Clock;
@@ -116,7 +115,7 @@ public class ChainedReaderTest {
         final Timer timeout = Threads.timer(Clock.SYSTEM, ConfigurationDefaults.RETURN_CONTROL_INTERVAL);
         while (records == null) {
             if (timeout.expired()) {
-                Assert.fail("Subsequent reader has not started");
+                AssertJUnit.fail("Subsequent reader has not started");
             }
             Thread.sleep(100);
             records = reader.poll();

@@ -5,9 +5,10 @@
  */
 package io.debezium.connector.maria;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
+import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.AssertJUnit.assertTrue;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,9 +19,6 @@ import io.debezium.config.Configuration;
 import org.apache.avro.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.fest.assertions.GenericAssert;
-import org.junit.Before;
-import org.junit.Test;
-
 import static org.fest.assertions.Assertions.assertThat;
 
 import io.confluent.connect.avro.AvroData;
@@ -40,8 +38,8 @@ public class SourceInfoTest {
     private long positionOfBeginEvent = 0L;
     private int eventNumberInTxn = 0;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         source = new SourceInfo();
         inTxn = false;
         positionOfBeginEvent = 0L;

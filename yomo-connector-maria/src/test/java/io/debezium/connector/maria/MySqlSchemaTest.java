@@ -5,16 +5,14 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
+import org.testng.Assert;
 import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import io.debezium.relational.Table;
 import io.debezium.relational.TableId;
@@ -37,16 +35,16 @@ public class MySqlSchemaTest {
     private MySqlSchema mysql;
     private SourceInfo source;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         Testing.Files.delete(TEST_FILE_PATH);
         build = new Configurator();
         mysql = null;
         source = new SourceInfo();
     }
 
-    @After
-    public void afterEach() {
+    @AfterMethod
+	public void afterEach() {
         if (mysql != null) {
             try {
                 mysql.shutdown();
@@ -101,7 +99,7 @@ public class MySqlSchemaTest {
         assertHistoryRecorded();
     }
 
-    @Test(expected = ParsingException.class)
+    @Test(expectedExceptions = ParsingException.class)
     public void shouldFailOnUnparseableDdl() throws InterruptedException {
         mysql = build
                 .storeDatabaseHistoryInFile(TEST_FILE_PATH)
@@ -225,7 +223,7 @@ public class MySqlSchemaTest {
             assertThat(stream).isNotNull();
             return IoUtil.read(stream);
         } catch (IOException e) {
-            fail("Unable to read '" + classpathResource + "'");
+            Assert.fail("Unable to read '" + classpathResource + "'");
         }
         assert false : "should never get here";
         return null;

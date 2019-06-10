@@ -5,11 +5,9 @@
  */
 package io.debezium.connector.maria;
 
-import static org.junit.Assert.assertEquals;
-
+import static org.testng.AssertJUnit.assertEquals;
+import org.testng.annotations.Test;
 import java.math.BigDecimal;
-
-import org.junit.Test;
 
 /**
  * @author Omar Al-Safi

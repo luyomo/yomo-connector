@@ -5,17 +5,12 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.Test;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.junit.Ignore;
-import org.junit.Test;
+public class ConnectionIT {
 
-import io.debezium.util.Testing;
-
-public class ConnectionIT implements Testing {
-
-    @Ignore
     @Test
     public void shouldConnectToDefaultDatabase() throws SQLException {
         try (MySQLConnection conn = MySQLConnection.forTestDatabase("mysql");) {
@@ -45,8 +40,7 @@ public class ConnectionIT implements Testing {
         }
     }
 
-    @Ignore
-    @Test
+	@Test
     public void shouldConnectToEmptyDatabase() throws SQLException {
         try (MySQLConnection conn = MySQLConnection.forTestDatabase("emptydb");) {
             conn.connect();

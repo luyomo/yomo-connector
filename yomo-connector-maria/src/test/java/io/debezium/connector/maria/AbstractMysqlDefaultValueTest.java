@@ -5,6 +5,10 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.Test;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.math.BigDecimal;
@@ -15,9 +19,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.function.Function;
-
-import org.junit.Before;
-import org.junit.Test;
 
 import io.debezium.doc.FixFor;
 import io.debezium.jdbc.JdbcValueConverters;
@@ -31,20 +32,30 @@ import io.debezium.time.ZonedTimestamp;
 /**
  * @author laomei
  */
-public abstract class AbstractMysqlDefaultValueTest {
+public class AbstractMysqlDefaultValueTest {
 
     protected AbstractDdlParser parser;
     protected Tables tables;
     private MySqlValueConverters converters;
     protected Function<MySqlValueConverters, AbstractDdlParser> parserProducer;
 
-    @Before
-    public void beforeEach() {
+    @BeforeClass
+    public void setUp() {
         converters = new MySqlValueConverters(JdbcValueConverters.DecimalMode.DOUBLE,
                                               TemporalPrecisionMode.CONNECT,
                                               JdbcValueConverters.BigIntUnsignedMode.LONG);
         parser = parserProducer.apply(converters);
         tables = new Tables();
+    }
+    
+    @BeforeMethod
+    public void beforeEach() {
+    	
+    }
+    
+    @AfterMethod
+    public void afterEach() {
+    	
     }
 
     @Test
@@ -398,9 +409,10 @@ public abstract class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("G").defaultValue()).isEqualTo(Date.from(ZonedDateTime.of(2018, 8, 31, 0, 0, 0, 0, ZoneOffset.UTC).toInstant()));
         assertThat(table.columnWithName("H").defaultValue()).isEqualTo((Date.from(Instant.ofEpochMilli(0))));
     }
-
+    
+    //@FixFor("DBZ-901")
+    
     @Test
-    @FixFor("DBZ-901")
     public void parseAlterTableTruncatedDefaulDateTime() {
         String sql = "CREATE TABLE TIME_TABLE (" +
                 "  A datetime(3) NOT NULL DEFAULT '0000-00-00 00:00:00.000'" +

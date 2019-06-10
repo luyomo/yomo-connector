@@ -5,6 +5,9 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.nio.file.Path;
@@ -13,10 +16,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.fest.assertions.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.debezium.config.Configuration;
 import io.debezium.connector.maria.MySqlConnectorConfig.SnapshotMode;
 import io.debezium.doc.FixFor;
@@ -40,8 +39,8 @@ public class ZZZGtidSetIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         stopConnector();
         DATABASE.createAndInitialize();
         RO_DATABASE.createAndInitialize();
@@ -49,8 +48,8 @@ public class ZZZGtidSetIT extends AbstractConnectorTest {
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @After
-    public void afterEach() {
+    @AfterMethod
+	public void afterEach() {
         try {
             stopConnector();
         } finally {

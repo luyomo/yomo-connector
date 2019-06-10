@@ -5,10 +5,12 @@
  */
 package io.debezium.connector.maria;
 
+import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.AssertJUnit.assertTrue;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
 import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import io.debezium.connector.maria.MySqlConnectorConfig.SecureConnectionMode;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -25,10 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.debezium.config.Configuration;
 import io.debezium.connector.maria.AbstractReader.AcceptAllPredicate;
 import io.debezium.connector.maria.MySqlConnectorConfig.EventProcessingFailureHandlingMode;
@@ -60,16 +58,16 @@ public class BinlogReaderIT {
     private KeyValueStore store;
     private SchemaChangeHistory schemaChanges;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         Testing.Files.delete(DB_HISTORY_PATH);
         DATABASE.createAndInitialize();
         this.store = KeyValueStore.createForTopicsBeginningWith(DATABASE.getServerName() + ".");
         this.schemaChanges = new SchemaChangeHistory(DATABASE.getServerName());
     }
 
-    @After
-    public void afterEach() {
+    @AfterMethod
+	public void afterEach() {
         if (reader != null) {
             try {
                 reader.stop();
@@ -422,7 +420,7 @@ public class BinlogReaderIT {
         assertThat(c5Time).isEqualTo(Duration.ofHours(-838).minusMinutes(59).minusSeconds(58).minusNanos(999999000));
     }
 
-    @Test(expected = ConnectException.class)
+    @Test(expectedExceptions = ConnectException.class)
     public void shouldFailOnSchemaInconsistency() throws Exception {
         inconsistentSchema(null);
         consumeAtLeast(2);
@@ -442,7 +440,7 @@ public class BinlogReaderIT {
         assertThat(consumed).isZero();
     }
 
-    @Test(expected = ConnectException.class)
+    @Test(expectedExceptions = ConnectException.class)
     @FixFor( "DBZ-1208" )
     public void shouldFailOnUnknownTlsProtocol() {
         final UniqueDatabase REGRESSION_DATABASE = new UniqueDatabase("logical_server_name", "regression_test")

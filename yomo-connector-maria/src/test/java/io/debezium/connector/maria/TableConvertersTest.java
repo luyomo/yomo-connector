@@ -5,10 +5,8 @@
  */
 package io.debezium.connector.maria;
 
-import static org.junit.Assert.fail;
-
-import org.junit.Ignore;
-import org.junit.Test;
+import org.testng.annotations.Test;
+import org.testng.Assert;
 
 /**
  * @author Randall Hauch
@@ -18,27 +16,27 @@ public class TableConvertersTest {
 
     @Test
     public void shouldHandleMetadataEventToUpdateTables() {
-        fail("Not yet implemented");
+        Assert.fail("Not yet implemented");
     }
 
     @Test
     public void shouldProduceSourceRecorForMetadataEventWhenConfigured() {
-        fail("Not yet implemented");
+        Assert.fail("Not yet implemented");
     }
 
     @Test
     public void shouldProduceSourceRecorForInsertEvent() {
-        fail("Not yet implemented");
+        Assert.fail("Not yet implemented");
     }
 
     @Test
     public void shouldProduceSourceRecorForUpdateEvent() {
-        fail("Not yet implemented");
+        Assert.fail("Not yet implemented");
     }
 
     @Test
     public void shouldProduceSourceRecorForDeleteEvent() {
-        fail("Not yet implemented");
+        Assert.fail("Not yet implemented");
     }
 
 }

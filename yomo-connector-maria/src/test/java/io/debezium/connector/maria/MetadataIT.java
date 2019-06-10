@@ -5,13 +5,11 @@
  */
 package io.debezium.connector.maria;
 
+import static org.testng.AssertJUnit.assertFalse;
+import org.testng.annotations.Test;
 import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.assertFalse;
-
 import java.sql.SQLException;
 import java.sql.Types;
-
-import org.junit.Test;
 
 import io.debezium.relational.Column;
 import io.debezium.relational.Table;

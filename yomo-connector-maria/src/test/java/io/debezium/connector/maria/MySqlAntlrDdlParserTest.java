@@ -6,13 +6,12 @@
 
 package io.debezium.connector.maria;
 
+import org.testng.annotations.Test;
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.sql.Types;
 import java.util.List;
 import java.util.stream.Stream;
-
-import org.junit.Test;
 
 import io.debezium.connector.maria.antlr.MySqlAntlrDdlParser;
 import io.debezium.doc.FixFor;

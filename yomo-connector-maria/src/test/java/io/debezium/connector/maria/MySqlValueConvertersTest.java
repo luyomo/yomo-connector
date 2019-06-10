@@ -5,6 +5,7 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.Test;
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.time.LocalDate;
@@ -13,8 +14,6 @@ import java.time.Month;
 import java.time.temporal.TemporalAdjuster;
 
 import org.apache.kafka.connect.data.Field;
-import org.junit.Test;
-
 import io.debezium.connector.maria.antlr.MySqlAntlrDdlParser;
 import io.debezium.jdbc.JdbcValueConverters;
 import io.debezium.jdbc.TemporalPrecisionMode;

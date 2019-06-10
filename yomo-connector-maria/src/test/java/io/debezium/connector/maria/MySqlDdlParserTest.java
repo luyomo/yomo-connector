@@ -5,19 +5,17 @@
  */
 package io.debezium.connector.maria;
 
+import static org.testng.AssertJUnit.assertFalse;
+import org.testng.annotations.Test;
+import org.testng.annotations.BeforeMethod;
+import org.testng.Assert;
 import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Types;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
-import org.junit.Before;
-import org.junit.Test;
 
 import io.debezium.connector.maria.junit.SkipForLegacyParser;
 import io.debezium.doc.FixFor;
@@ -41,8 +39,8 @@ public class MySqlDdlParserTest {
     protected Tables tables;
     protected SimpleDdlParserListener listener;
 
-    @Before
-    public void beforeEach() {
+    @BeforeMethod
+	public void beforeEach() {
         listener = new SimpleDdlParserListener();
         parser = new MysqlDdlParserWithSimpleTestListener(listener);
         tables = new Tables();
@@ -1693,7 +1691,7 @@ public class MySqlDdlParserTest {
             assertThat(stream).isNotNull();
             return IoUtil.read(stream);
         } catch (IOException e) {
-            fail("Unable to read '" + classpathResource + "'");
+            Assert.fail("Unable to read '" + classpathResource + "'");
         }
         assert false : "should never get here";
         return null;
@@ -1720,7 +1718,7 @@ public class MySqlDdlParserTest {
             });
             return sb.toString();
         } catch (IOException e) {
-            fail("Unable to read '" + classpathResource + "'");
+            Assert.fail("Unable to read '" + classpathResource + "'");
         }
         assert false : "should never get here";
         return null;

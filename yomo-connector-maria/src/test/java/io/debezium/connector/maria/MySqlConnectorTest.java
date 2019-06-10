@@ -5,11 +5,10 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.Test;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.ConfigKey;
 import org.apache.kafka.connect.connector.Connector;
-import org.junit.Test;
-
 import static org.fest.assertions.Assertions.assertThat;
 
 /**
