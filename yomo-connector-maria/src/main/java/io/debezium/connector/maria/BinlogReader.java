@@ -97,7 +97,6 @@ public class BinlogReader extends AbstractReader {
     private final Predicate<String> gtidDmlSourceFilter;
     private final AtomicLong totalRecordCounter = new AtomicLong();
     private volatile Map<String, ?> lastOffset = null;
-    private com.github.yomo.maria.binlog.GtidSet gtidSet;
     private Heartbeat heartbeat;
     private MySqlJdbcContext connectionContext;
 
@@ -462,6 +461,7 @@ public class BinlogReader extends AbstractReader {
     }
 
     protected void handleEvent(Event event) {
+    	
         if (event == null) {
             return;
         }
@@ -473,6 +473,7 @@ public class BinlogReader extends AbstractReader {
                                                                               // precision
         source.setBinlogServerId(eventHeader.getServerId());
         EventType eventType = eventHeader.getEventType();
+        System.out.println("The event type is " + eventType);
         if (eventType == EventType.ROTATE) {
             EventData eventData = event.getData();
             RotateEventData rotateEventData;
@@ -490,6 +491,7 @@ public class BinlogReader extends AbstractReader {
         // If there is a handler for this event, forward the event to it ...
         try {
             // Forward the event to the handler ...
+        	
             eventHandlers.getOrDefault(eventType, this::ignoreEvent).accept(event);
 
             // Generate heartbeat message if the time is right
@@ -626,6 +628,18 @@ public class BinlogReader extends AbstractReader {
         logger.debug("GTID transaction: {}", event);
         MariaGtidEventData gtidEvent = unwrapData(event);
         String gtid = String.format("%d-%d-%d", gtidEvent.getDomainId(), event.getHeader().getServerId() , gtidEvent.getSequenceNumber());
+        
+        
+     // We are starting a new transaction ...
+        source.startNextTransaction();
+        //source.setBinlogThread(gtidEvent.getThreadId());
+        if (initialEventsToSkip != 0) {
+            logger.debug("Restarting partially-processed transaction; change events will not be created for the first {} events plus {} more rows in the next event",
+                         initialEventsToSkip, startingRowNumber);
+            // We are restarting, so we need to skip the events in this transaction that we processed previously...
+            skipEvent = true;
+        }
+        
         //gtidSet.add(gtid);
         source.startGtid(gtid, null); // rather than use the client's GTID set   
         ignoreDmlEventByGtidSource = false;

@@ -84,6 +84,10 @@ class EventBuffer {
             return;
         }
 
+        if(event.getHeader().getEventType() == EventType.MARIA_GTID_EVENT) {
+        	beginTransaction(event);
+        }
+        
         if (event.getHeader().getEventType() == EventType.QUERY) {
             QueryEventData command = reader.unwrapData(event);
             LOGGER.debug("Received query command: {}", event);
