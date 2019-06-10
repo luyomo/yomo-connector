@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Suite">
+  <test thread-count="5" name="Test">
+    <classes>
+      <class name="io.debezium.connector.maria.AbstractMysqlDefaultValueTest"/>
+      <class name="io.debezium.connector.maria.ParallelSnapshotReaderTest"/>
+      <class name="io.debezium.connector.maria.MySqlConnectorTest"/>
+      <class name="io.debezium.connector.maria.UpdateBuilder"/>
+      <class name="io.debezium.connector.maria.MySqlUnsignedIntegerConverterTest"/>
+      <class name="io.debezium.connector.maria.EventQueue"/>
+      <class name="io.debezium.connector.maria.FiltersTest"/>
+      <class name="io.debezium.connector.maria.MySqlGeometryIT"/>
+      <class name="io.debezium.connector.maria.MySqlUnsignedIntegerIT"/>
+      <class name="io.debezium.connector.maria.PositionAssert"/>
+      <class name="io.debezium.connector.maria.MySqlFixedLengthBinaryColumnIT"/>
+      <class name="io.debezium.connector.maria.ChainedReaderTest"/>
+      <class name="io.debezium.connector.maria.MySqlValueConvertersTest"/>
+      <class name="io.debezium.connector.maria.AnyValue"/>
+      <class name="io.debezium.connector.maria.MysqlDefaultValueAllZeroTimeIT"/>
+      <class name="io.debezium.connector.maria.ConnectionIT"/>
+      <class name="io.debezium.connector.maria.BinlogReaderIT"/>
+      <class name="io.debezium.connector.maria.MysqlDefaultValueIT"/>
+      <class name="io.debezium.connector.maria.Row"/>
+      <class name="io.debezium.connector.maria.ReconcilingBinlogReaderTest"/>
+      <class name="io.debezium.connector.maria.DatabaseGeoDifferences"/>
+      <class name="io.debezium.connector.maria.BinlogReaderBufferIT"/>
+      <class name="io.debezium.connector.maria.MySqlDdlParserTest"/>
+      <class name="io.debezium.connector.maria.BinlogPosition"/>
+      <class name="io.debezium.connector.maria.MySqlNumericColumnIT"/>
+      <class name="io.debezium.connector.maria.MySqlTimestampColumnIT"/>
+      <class name="io.debezium.connector.maria.MySqlYearIT"/>
+      <class name="io.debezium.connector.maria.SnapshotReaderIT"/>
+      <class name="io.debezium.connector.maria.CompletingMockReader"/>
+      <class name="io.debezium.connector.maria.TableConvertersTest"/>
+      <class name="io.debezium.connector.maria.MysqlDdlParserWithSimpleTestListener"/>
+      <class name="io.debezium.connector.maria.MySqlEnumColumnIT"/>
+      <class name="io.debezium.connector.maria.MySqlConnectorIT"/>
+      <class name="io.debezium.connector.maria.RowBuilder"/>
+      <class name="io.debezium.connector.maria.TraceLifecycleListener"/>
+      <class name="io.debezium.connector.maria.TopicNameSanitizationIT"/>
+      <class name="io.debezium.connector.maria.MySqlConnectorJsonIT"/>
+      <class name="io.debezium.connector.maria.MysqlAntlrDefaultValueTest"/>
+      <class name="io.debezium.connector.maria.ZZZGtidSetIT"/>
+      <class name="io.debezium.connector.maria.MySqlDateTimeInKeyIT"/>
+      <class name="io.debezium.connector.maria.MySqlSchemaTest"/>
+      <class name="io.debezium.connector.maria.SourceInfoTest"/>
+      <class name="io.debezium.connector.maria.MySqlDecimalColumnIT"/>
+      <class name="io.debezium.connector.maria.MySqlGeometryTest"/>
+      <class name="io.debezium.connector.maria.AbstractMysqlDefaultValueTest"/>
+      <class name="io.debezium.connector.maria.MetadataIT"/>
+      <class name="io.debezium.connector.maria.MockReader"/>
+      <class name="io.debezium.connector.maria.MySqlTableMaintenanceStatementsIT"/>
+      <class name="io.debezium.connector.maria.MySqlSourceTypeInSchemaIT"/>
+      <class name="io.debezium.connector.maria.MySqlAntlrDdlParserTest"/>
+      <class name="io.debezium.connector.maria.ReadBinLogIT"/>
+      <class name="io.debezium.connector.maria.MySqlConnectorRegressionIT"/>
+    </classes>
+  </test> <!-- Test -->
+</suite> <!-- Suite -->
