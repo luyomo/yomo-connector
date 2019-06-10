@@ -1,0 +1,81 @@
+* Unit test
+    | test case                                  | result             | comment              |
+    |--------------------------------------------+--------------------+----------------------|
+    | AbstractMysqlDefaultValueTest.java         | X                  |                      |
+    | MysqlAntlrDefaultValueTest.java            | 19/1               |                      |
+    | BinlogReaderBufferIT.java                  | O                  |                      |
+    | BinlogReaderIT.java                        | X                  |                      |
+    | Configurator.java                          | X                  |                      |
+    | ConnectionIT.java                          | To fix             |                      |
+    | MetadataIT.java                            | X                  |                      |
+    | MySqlAntlrDdlParserTest.java               | X                  |                      |
+    | MySqlDateTimeInKeyIT.java                  | X                  |                      |
+    | MySqlDdlParserTest.java                    | 93/27              |                      |
+    | MySqlDecimalColumnIT.java                  | X                  |                      |
+    | MysqlDefaultValueAllZeroTimeIT.java        | X                  |                      |
+    | MysqlDefaultValueIT.java                   | X                  |                      |
+    | MysqlDefaultValueTest.java                 | 16/1               |                      |
+    | MySqlEnumColumnIT.java                     | X                  |                      |
+    | MySqlFixedLengthBinaryColumnIT.java        | X                  |                      |
+    | MySqlGeometryIT.java                       | X                  |                      |
+    | MySqlNumericColumnIT.java                  | X                  |                      |
+    | MySqlSchemaTest.java                       | 5/5                |                      |
+    | MySqlSourceTypeInSchemaIT.java             | X                  |                      |
+    | MySqlTableMaintenanceStatementsIT.java     | X                  |                      |
+    | MySqlTimestampColumnIT.java                | X                  |                      |
+    | MySqlUnsignedIntegerIT.java                | X                  |                      |
+    | MySqlValueConvertersTest.java              | 5/1                |                      |
+    | MySqlYearIT.java                           | X                  |                      |
+    | ParallelSnapshotReaderTest.java            | 9/6                |                      |
+    | ReadBinLogIT.java                          | To fix             |                      |
+    | SnapshotReaderIT.java                      | X                  |                      |
+    | SourceInfoTest.java                        | 38/2               |                      |
+    | TableConvertersTest.java                   | junit=> to convert |                      |
+    | TopicNameSanitizationIT.java               | X                  |                      |
+    | ZZZGtidSetIT.java                          | X                  | To fix               |
+    | MySqlConnectorJsonIT.java                  | Not test           | No need to test json |
+    | DatabaseDifferences.java                   | No test            | Interface            |
+    | junit/SkipForLegacyParser.java             | No test            | Interface            |
+    | junit/SkipTestForLegacyParser.java         | No test            | Tool                 |
+    | MySQLConnection.java                       | Not test           | Tool                 |
+    | UniqueDatabase.java                        | Not test           |                      |
+    | ChainedReaderTest.java                     | O                  |                      |
+    | FiltersTest.java                           | O                  |                      |
+    | MySqlConnectorIT.java                      | O                  |                      |
+    | MySqlConnectorRegressionIT.java            | O                  |                      |
+    | MySqlConnectorTest.java                    | O                  |                      |
+    | MySqlUnsignedIntegerConverterTest.java     | O                  |                      |
+    | MySqlGeometryTest.java                     | O                  |                      |
+    | ReconcilingBinlogReaderTest.java           | O                  |                      |
+    | AbstractMySqlConnectorOutputTest.java.2fix | -                  |                      |
+    | MySqlTaskContextIT.java.2fix               | -                  |                      |
+    | MySqlTaskContextTest.java.2fix             | -                  |                      |
+
+** TODO AbstractMysqlDefaultValueTest.java
+The abstract class how to test
+** BinlogReaderBufferIT.java
+  - DDL \\
+    The DDL is fetched from test/resource folder
+  - Database connection String
+    The DB connection info is fetched from system properties.
+  - shouldCorrectlyManageRollback
+    Problem: All the rollback transaction appeared in the record different from the expectation. \\
+    MySql's BEGIN statement  is contained in the QUERY EVENT. In the original source code, the begin transaction is \\
+at the QUERY event. Please find the below source code to find it(9.5 final)
+    + debezium-connect-mysql->EventBuffer.java->add
+    + debezium-connect-mysql->BinlogReader.java->handleQueryEvent
+    + mysql-binlog-connector-java->BinaryLogClient->updateGtid
+    All these logical have to be moved to the MARIA_GTID_EVENT event as one new transaction. Please find the coressponding \\
+source code for the improvement.
+  - shouldProcessLargeTransaction
+    Problem: Only 3 insert statement appeared in the result different from the expectation of 40
+    One parameter called [BUFFER_SIZE_FOR_BINLOG_READER] impact the capacity of the event buffer. This config parameter \\
+is used in the debezium-connect-mysql->BinlogReader.java
+    #+BEGIN_SRC
+      public BinlogReader(String name, MySqlTaskContext context, HaltingPredicate acceptAndContinue, long serverId) {
+      ....
+      client.registerEventListener(context.bufferSizeForBinlogReader() == 0
+          ? this::handleEvent
+          : (new EventBuffer(context.bufferSizeForBinlogReader(), this))::add);
+    #+END_SRC
+    At the same time, in the EventBuffer, it should be switched to switchToBufferFullMode.
