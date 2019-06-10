@@ -461,7 +461,6 @@ public class BinlogReader extends AbstractReader {
     }
 
     protected void handleEvent(Event event) {
-    	
         if (event == null) {
             return;
         }
@@ -473,7 +472,6 @@ public class BinlogReader extends AbstractReader {
                                                                               // precision
         source.setBinlogServerId(eventHeader.getServerId());
         EventType eventType = eventHeader.getEventType();
-        System.out.println("The event type is " + eventType);
         if (eventType == EventType.ROTATE) {
             EventData eventData = event.getData();
             RotateEventData rotateEventData;
