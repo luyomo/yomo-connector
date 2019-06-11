@@ -3,14 +3,9 @@
     |--------------------------------------------+--------------------+--------------------------------------|
     | AbstractMysqlDefaultValueTest.java         | X                  |                                      |
     | MysqlAntlrDefaultValueTest.java            | 19/1               |                                      |
-    | BinlogReaderBufferIT.java                  | O                  |                                      |
     | BinlogReaderIT.java                        | 9/10               | Waiting the TLS setting in the maria |
     | Configurator.java                          | X                  |                                      |
-    | ConnectionIT.java                          | O                  |                                      |
-    | MetadataIT.java                            | O                  |                                      |
-    | MySqlAntlrDdlParserTest.java               | O                  |                                      |
-    | MySqlDateTimeInKeyIT.java                  | X                  |                                      |
-    | MySqlDdlParserTest.java                    | O                  |                                      |
+    | MySqlDateTimeInKeyIT.java                  | O                  |                                      |
     | MySqlDecimalColumnIT.java                  | X                  |                                      |
     | MysqlDefaultValueAllZeroTimeIT.java        | X                  |                                      |
     | MysqlDefaultValueIT.java                   | X                  |                                      |
@@ -34,11 +29,17 @@
     | TopicNameSanitizationIT.java               | X                  |                                      |
     | ZZZGtidSetIT.java                          | X                  | To fix                               |
     | MySqlConnectorJsonIT.java                  | Not test           | No need to test json                 |
-    | DatabaseDifferences.java                   | No test            | Interface                            |
-    | junit/SkipForLegacyParser.java             | No test            | Interface                            |
-    | junit/SkipTestForLegacyParser.java         | No test            | Tool                                 |
+    | DatabaseDifferences.java                   | Not test           | Interface                            |
+    | junit/SkipForLegacyParser.java             | Not test           | Interface                            |
+    | junit/SkipTestForLegacyParser.java         | Not test           | Tool                                 |
     | MySQLConnection.java                       | Not test           | Tool                                 |
     | UniqueDatabase.java                        | Not test           |                                      |
+    | BinlogReaderBufferIT.java                  | O                  |                                      |
+    | ConnectionIT.java                          | O                  |                                      |
+    | MetadataIT.java                            | O                  |                                      |
+    | MySqlAntlrDdlParserTest.java               | O                  |                                      |
+    | MySqlDdlParserTest.java                    | O                  |                                      |
+    |--------------------------------------------+--------------------+--------------------------------------|
     | ChainedReaderTest.java                     | O                  |                                      |
     | FiltersTest.java                           | O                  |                                      |
     | MySqlConnectorIT.java                      | O                  |                                      |
@@ -89,3 +90,13 @@ digits rather than 6.
 and "Commit requested but TX was not started before". To resolve the warning message, add the [consumeEvent(event);]
 to the else in the mysql-binlog-connector-java->EventBuffer->Add. Mariadb's QUERY event only contain those DDL, commit
 and ROLLBACK. Thos queries (insert/delte/update) are in the (WRITE_ROWS/UPDATE_ROWS/DELETE_ROWS).
+** MySqlDateTimeInKey
+  - The event is as below
+    | Seq | EventType     |       GTID | Query           | SNAPSHORT | Addition                 | num |
+    |-----+---------------+------------+-----------------+-----------+--------------------------+-----|
+    |     | SET           |          - |                 | yes       | SET character_set_server | 1   |
+    |     | USE           |          - |                 | yes       | USE database name        | 1   |
+    |   1 | Query         | 2-223344-1 | CREATE DATABASE | yes       | DROP DATABASE            | 2   |
+    |   2 | Query         | 2-223344-2 | CREATE TABLE    | yes       | DROP TABLE               | 2   |
+    |   3 | Annotate_rows | 2-223344-3 | INSERT INTO     |           |                          |     |
+    |   4 | Annotate_rows | 2-223344-4 | INSERT INTO     |           |                          |     |
