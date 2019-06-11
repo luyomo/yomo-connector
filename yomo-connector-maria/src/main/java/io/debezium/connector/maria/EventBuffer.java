@@ -88,18 +88,22 @@ class EventBuffer {
         	beginTransaction(event);
         }
         
+        
         if (event.getHeader().getEventType() == EventType.QUERY) {
             QueryEventData command = reader.unwrapData(event);
             LOGGER.debug("Received query command: {}", event);
             String sql = command.getSql().trim();
-            if (sql.equalsIgnoreCase("BEGIN")) {
-                beginTransaction(event);
-            } else if (sql.equalsIgnoreCase("COMMIT")) {
+            System.out.println("Teh query : " + sql);
+//            if (sql.equalsIgnoreCase("BEGIN")) {
+//                beginTransaction(event);
+//            } else 
+            if (sql.equalsIgnoreCase("COMMIT")) {
                 completeTransaction(true, event);
             } else if (sql.equalsIgnoreCase("ROLLBACK")) {
                 rollbackTransaction();
             } else {
-                consumeEvent(event);
+                //consumeEvent(event);
+                completeTransaction(true, event);
             }
         } else if (event.getHeader().getEventType() == EventType.XID) {
             completeTransaction(true, event);

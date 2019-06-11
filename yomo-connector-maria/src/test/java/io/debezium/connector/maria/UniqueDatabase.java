@@ -40,7 +40,7 @@ import io.debezium.util.Testing;
  */
 public class UniqueDatabase {
 
-    public static final ZoneId TIMEZONE = ZoneId.of("US/Samoa");
+    public static final ZoneId TIMEZONE = ZoneId.of("UTC");
 
     private static final String DEFAULT_DATABASE = "mysql";
     private static final String[] CREATE_DATABASE_DDL = new String[] {
@@ -54,6 +54,7 @@ public class UniqueDatabase {
     private final String serverName;
     private Path dbHistoryPath;
     private final String identifier;
+    private final Map<String, Object> dbConnInfo = new HashMap<String, Object>();
 
     private UniqueDatabase(final String serverName, final String databaseName, final String identifier) {
         this.identifier = identifier;
@@ -83,6 +84,20 @@ public class UniqueDatabase {
      */
     public UniqueDatabase(final String serverName, final String databaseName, final UniqueDatabase sibling) {
         this(serverName, databaseName, sibling.getIdentifier());
+    }
+    
+    public void setConnInfo(final String proFile) {
+    	ResourceBundle bundle = ResourceBundle.getBundle("jdbc");
+    	String prefix = "jdbc.mysql.replication.";
+
+    	if (bundle.getString(prefix + "database.hostname"     ) != null) dbConnInfo.put("hostname", bundle.getString(prefix + "database.hostname"));
+    	if (bundle.getString(prefix + "database.port"         ) != null) dbConnInfo.put("port"    , bundle.getString(prefix + "database.port"));
+    	if (bundle.getString(prefix + "database.superUsername") != null) dbConnInfo.put("user"    , bundle.getString(prefix + "database.superUsername"));
+    	if (bundle.getString(prefix + "database.superPassword") != null) dbConnInfo.put("password", bundle.getString(prefix + "database.superPassword"));
+    }
+    
+    public Map<String, Object> getConnInfo(){
+    	return dbConnInfo;
     }
 
     private String convertSQL(final String sql) {
@@ -119,15 +134,19 @@ public class UniqueDatabase {
      * See fnDbz162 procedure in reqression_test.sql for example of usage.
      */
     public void createAndInitialize() {
-    	Map<String, Object> emptymap = new HashMap<String, Object>();
-    	ResourceBundle bundle = ResourceBundle.getBundle("jdbc");
-    	String prefix = "jdbc.mysql.replication.";
+    	if(dbConnInfo.size() == 0) {
+    	    Map<String, Object> emptymap = new HashMap<String, Object>();
+    	    ResourceBundle bundle = ResourceBundle.getBundle("jdbc");
+    	    String prefix = "jdbc.mysql.replication.";
 
-    	if (bundle.getString(prefix + "database.hostname"     ) != null) emptymap.put("hostname", bundle.getString(prefix + "database.hostname"));
-    	if (bundle.getString(prefix + "database.port"         ) != null) emptymap.put("port"    , bundle.getString(prefix + "database.port"));
-    	if (bundle.getString(prefix + "database.superUsername") != null) emptymap.put("user"    , bundle.getString(prefix + "database.superUsername"));
-    	if (bundle.getString(prefix + "database.superPassword") != null) emptymap.put("password", bundle.getString(prefix + "database.superPassword"));
-        createAndInitialize(emptymap);
+    	    if (bundle.getString(prefix + "database.hostname"     ) != null) emptymap.put("hostname", bundle.getString(prefix + "database.hostname"));
+    	    if (bundle.getString(prefix + "database.port"         ) != null) emptymap.put("port"    , bundle.getString(prefix + "database.port"));
+    	    if (bundle.getString(prefix + "database.superUsername") != null) emptymap.put("user"    , bundle.getString(prefix + "database.superUsername"));
+    	    if (bundle.getString(prefix + "database.superPassword") != null) emptymap.put("password", bundle.getString(prefix + "database.superPassword"));
+            createAndInitialize(emptymap);
+    	}else {
+    		createAndInitialize(dbConnInfo);
+    	}
     }
 
     /**
@@ -177,6 +196,20 @@ public class UniqueDatabase {
             throw new IllegalStateException(e);
         }
     }
+    
+    /**
+     * Drop the created database
+     */
+    public void dropDB() {
+    	try {
+            try (MySQLConnection connection = MySQLConnection.forTestDatabase(DEFAULT_DATABASE, dbConnInfo)) {
+                connection.execute("drop database " + this.databaseName );
+            }
+        } catch (final Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+    
 
     /**
      * @param dbHistoryPath - directory where to store database schema history

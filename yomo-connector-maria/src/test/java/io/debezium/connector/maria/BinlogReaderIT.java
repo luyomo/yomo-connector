@@ -58,15 +58,27 @@ public class BinlogReaderIT {
     private KeyValueStore store;
     private SchemaChangeHistory schemaChanges;
 
-    @BeforeMethod
-	public void beforeEach() {
+    @BeforeMethod(groups = {"test","reader"})
+	public void beforeEach() throws SQLException, InterruptedException {
         Testing.Files.delete(DB_HISTORY_PATH);
+        DATABASE.setConnInfo("jdbc");
+        try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
+            try (JdbcConnection connection = db.connect()) {
+                final Connection jdbc = connection.connection();
+               
+                final Statement statement = jdbc.createStatement();
+                statement.executeUpdate("reset master");
+            }
+        }
+        
         DATABASE.createAndInitialize();
         this.store = KeyValueStore.createForTopicsBeginningWith(DATABASE.getServerName() + ".");
         this.schemaChanges = new SchemaChangeHistory(DATABASE.getServerName());
+        
+        
     }
 
-    @AfterMethod
+    @AfterMethod(groups = {"test","reader"})
 	public void afterEach() {
         if (reader != null) {
             try {
@@ -78,6 +90,7 @@ public class BinlogReaderIT {
                     } finally {
                         context = null;
                         Testing.Files.delete(DB_HISTORY_PATH);
+                        DATABASE.dropDB();
                     }
                 }
             }
@@ -121,13 +134,15 @@ public class BinlogReaderIT {
 
     protected Configuration.Builder simpleConfig() {
         return DATABASE.defaultConfig()
-                            .with(MySqlConnectorConfig.USER, "replicator")
-                            .with(MySqlConnectorConfig.PASSWORD, "replpass")
+                            .with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", DATABASE.getConnInfo().get("hostname").toString()))
+                            .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", DATABASE.getConnInfo().get("port").toString()))
+                            .with(MySqlConnectorConfig.USER, DATABASE.getConnInfo().get("user").toString())
+                            .with(MySqlConnectorConfig.PASSWORD, DATABASE.getConnInfo().get("password").toString())
                             .with(MySqlConnectorConfig.INCLUDE_SCHEMA_CHANGES, false)
                             .with(MySqlConnectorConfig.INCLUDE_SQL_QUERY, false);
     }
 
-    @Test
+    @Test(groups = {"reader"})
     public void shouldCreateSnapshotOfSingleDatabase() throws Exception {
         config = simpleConfig().build();
         Filters filters = new Filters.Builder(config).build();
@@ -189,7 +204,7 @@ public class BinlogReaderIT {
         assertThat(orders.numberOfValueSchemaChanges()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = {"reader"})
     public void shouldCreateSnapshotOfSingleDatabaseWithSchemaChanges() throws Exception {
         config = simpleConfig().with(MySqlConnectorConfig.INCLUDE_SCHEMA_CHANGES, true).build();
         Filters filters = new Filters.Builder(config).build();
@@ -257,7 +272,7 @@ public class BinlogReaderIT {
      * Verify all events are properly filtered.
      * Verify numberOfFilteredEvents metric is incremented correctly.
      */
-    @Test
+    @Test(groups = {"reader"})
     @FixFor( "DBZ-1206" )
     public void shouldFilterAllRecordsBasedOnDatabaseWhitelistFilter() throws Exception {
         // Define configuration that will ignore all events from MySQL source.
@@ -275,8 +290,8 @@ public class BinlogReaderIT {
         // Start reading the binlog ...
         reader.start();
 
-        // Lets wait for at least 35 events to be filtered.
-        final int expectedFilterCount = 35;
+        // Lets wait for at least 26 events to be filtered.
+        final int expectedFilterCount = 26;
         final long numberFiltered = filterAtLeast(expectedFilterCount, 20, TimeUnit.SECONDS);
 
         // All events should have been filtered.
@@ -292,7 +307,7 @@ public class BinlogReaderIT {
         assertThat(reader.getMetrics().getNumberOfSkippedEvents()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = {"reader"})
     @FixFor( "DBZ-183" )
     public void shouldHandleTimestampTimezones() throws Exception {
         final UniqueDatabase REGRESSION_DATABASE = new UniqueDatabase("logical_server_name", "regression_test")
@@ -323,7 +338,7 @@ public class BinlogReaderIT {
         assertThat(sourceRecords.size()).isEqualTo(1);
         // TIMESTAMP should be converted to UTC, using the DB's (or connection's) time zone
         ZonedDateTime expectedTimestamp = ZonedDateTime.of(
-                LocalDateTime.parse("2014-09-08T17:51:04.780"),
+                LocalDateTime.parse("2014-09-08T17:51:04.770"),
                 UniqueDatabase.TIMEZONE
         )
         .withZoneSameInstant(ZoneOffset.UTC);
@@ -336,7 +351,7 @@ public class BinlogReaderIT {
         assertThat(actualTimestampString).isEqualTo(expectedTimestampString);
     }
 
-    @Test
+    @Test(groups = {"reader"})
     @FixFor( "DBZ-342" )
     public void shouldHandleMySQLTimeCorrectly() throws Exception {
         final UniqueDatabase REGRESSION_DATABASE = new UniqueDatabase("logical_server_name", "regression_test")
@@ -373,11 +388,11 @@ public class BinlogReaderIT {
         // '517:51:04.777'
         long c1 = after.getInt64("c1");
         Duration c1Time = Duration.ofNanos(c1 * 1_000);
-        Duration c1ExpectedTime = toDuration("PT517H51M4.78S");
+        Duration c1ExpectedTime = toDuration("PT517H51M4.77S");
         assertEquals(c1ExpectedTime, c1Time);
         assertEquals(c1ExpectedTime.toNanos(), c1Time.toNanos());
-        assertThat(c1Time.toNanos()).isEqualTo(1864264780000000L);
-        assertThat(c1Time).isEqualTo(Duration.ofHours(517).plusMinutes(51).plusSeconds(4).plusMillis(780));
+        assertThat(c1Time.toNanos()).isEqualTo(1864264770000000L);
+        assertThat(c1Time).isEqualTo(Duration.ofHours(517).plusMinutes(51).plusSeconds(4).plusMillis(770));
 
         // '-13:14:50'
         long c2 = after.getInt64("c2");
@@ -420,27 +435,27 @@ public class BinlogReaderIT {
         assertThat(c5Time).isEqualTo(Duration.ofHours(-838).minusMinutes(59).minusSeconds(58).minusNanos(999999000));
     }
 
-    @Test(expectedExceptions = ConnectException.class)
+    @Test(expectedExceptions = ConnectException.class, groups = {"reader"})
     public void shouldFailOnSchemaInconsistency() throws Exception {
         inconsistentSchema(null);
         consumeAtLeast(2);
     }
 
-    @Test
+    @Test(groups = {"reader"})
     public void shouldWarnOnSchemaInconsistency() throws Exception {
         inconsistentSchema(EventProcessingFailureHandlingMode.WARN);
         int consumed = consumeAtLeast(2, 2, TimeUnit.SECONDS);
         assertThat(consumed).isZero();
     }
 
-    @Test
+    @Test(groups = {"reader"})
     public void shouldIgnoreOnSchemaInconsistency() throws Exception {
         inconsistentSchema(EventProcessingFailureHandlingMode.IGNORE);
         int consumed = consumeAtLeast(2, 2, TimeUnit.SECONDS);
         assertThat(consumed).isZero();
     }
 
-    @Test(expectedExceptions = ConnectException.class)
+    @Test(expectedExceptions = ConnectException.class, groups = {"reader"})
     @FixFor( "DBZ-1208" )
     public void shouldFailOnUnknownTlsProtocol() {
         final UniqueDatabase REGRESSION_DATABASE = new UniqueDatabase("logical_server_name", "regression_test")
@@ -462,7 +477,7 @@ public class BinlogReaderIT {
         reader.start();
     }
 
-    @Test
+    @Test(groups = {"totest"})
     @FixFor( "DBZ-1208" )
     public void shouldAcceptTls12() {
         final UniqueDatabase REGRESSION_DATABASE = new UniqueDatabase("logical_server_name", "regression_test")
@@ -515,7 +530,7 @@ public class BinlogReaderIT {
         reader.start();
         reader.context.dbSchema().applyDdl(context.source(), DATABASE.getDatabaseName(), "DROP TABLE customers", null);
         try (
-                final MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName());
+                final MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());
                 final JdbcConnection connection = db.connect();
                 final Connection jdbc = connection.connection();
                 final Statement statement = jdbc.createStatement()) {

@@ -42,29 +42,20 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
             .withDbHistoryPath(DB_HISTORY_PATH);
     private final UniqueDatabase RO_DATABASE = new UniqueDatabase("myServer2", "connector_test_ro", DATABASE)
             .withDbHistoryPath(DB_HISTORY_PATH);
-    private static Map<String, Object> externalConfig = new HashMap<String, Object>();
 
     private Configuration config;
 
-    @BeforeMethod(groups = {"test"})
+    @BeforeMethod(groups = {"test","buffer"})
 	public void beforeEach() throws SQLException, InterruptedException {
-    	ResourceBundle bundle = ResourceBundle.getBundle("jdbc");
-    	String prefix = "jdbc.mysql.replication.";
-
-    	if (bundle.getString(prefix + "database.hostname"     ) != null) externalConfig.put("hostname", bundle.getString(prefix + "database.hostname"));
-    	if (bundle.getString(prefix + "database.port"         ) != null) externalConfig.put("port"    , bundle.getString(prefix + "database.port"));
-    	if (bundle.getString(prefix + "database.superUsername") != null) externalConfig.put("user"    , bundle.getString(prefix + "database.superUsername"));
-    	if (bundle.getString(prefix + "database.superPassword") != null) externalConfig.put("password", bundle.getString(prefix + "database.superPassword"));
-    	
-    	
+    	DATABASE.setConnInfo("jdbc");
         stopConnector();
-        DATABASE.createAndInitialize(externalConfig);
+        DATABASE.createAndInitialize();
 //        RO_DATABASE.createAndInitialize();
         initializeConnectorTestFramework();
 //        Testing.Files.delete(DB_HISTORY_PATH);
         
         
-    	try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), externalConfig);) {
+    	try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());) {
             try (JdbcConnection connection = db.connect()) {
                 final Connection jdbc = connection.connection();
                
@@ -74,12 +65,12 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         }
     }
 
-    @AfterMethod(groups = {"test"})
+    @AfterMethod(groups = {"test", "buffer"})
 	public void afterEach() throws SQLException, InterruptedException {
         try {
             stopConnector();
             
-            DATABASE.dropDB(externalConfig);
+            DATABASE.dropDB(DATABASE.getConnInfo());
             
             
         } finally {
@@ -87,7 +78,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         }
     }
 
-    @Test(groups = {"test"})
+    @Test(groups = {"test","buffer"})
     public void shouldCorrectlyManageRollback() throws SQLException, InterruptedException {
         String masterPort = System.getProperty("database.port", "3306");
         String replicaPort = System.getProperty("database.replica.port", "3306");
@@ -99,21 +90,10 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
 
         // Use the DB configuration to define the connector's configuration to use the "replica"
         // which may be the same as the "master" ...
-      config = Configuration.create()
-      .with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", externalConfig.get("hostname").toString()))
-      .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", externalConfig.get("port").toString()))
-      .with(MySqlConnectorConfig.USER, externalConfig.get("user").toString())
-      .with(MySqlConnectorConfig.PASSWORD, externalConfig.get("password").toString())
-      .with(MySqlConnectorConfig.SERVER_ID, 18765)
-      .with(MySqlConnectorConfig.SERVER_NAME, DATABASE.getServerName())
-      .with(MySqlConnectorConfig.SSL_MODE, SecureConnectionMode.DISABLED)
-      .with(MySqlConnectorConfig.POLL_INTERVAL_MS, 10)
-      .with(MySqlConnectorConfig.DATABASE_WHITELIST, DATABASE.getDatabaseName())
-      .with(MySqlConnectorConfig.DATABASE_HISTORY, FileDatabaseHistory.class)
-      .with(MySqlConnectorConfig.INCLUDE_SCHEMA_CHANGES, true)
-      .with(MySqlConnectorConfig.BUFFER_SIZE_FOR_BINLOG_READER, 10_000)
-      .with(FileDatabaseHistory.FILE_PATH, DB_HISTORY_PATH)
-      .build();
+      config = dbConfig()
+    	      .with(MySqlConnectorConfig.BUFFER_SIZE_FOR_BINLOG_READER, 10_000)
+    	      .with(FileDatabaseHistory.FILE_PATH, DB_HISTORY_PATH)
+    	      .build();
 
         // Start the connector ...
         start(MySqlConnector.class, config);
@@ -125,7 +105,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         // supported only for non-GTID setup
         // ---------------------------------------------------------------------------------------------------------------
         if (replicaIsMaster) {
-            try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), externalConfig);) {
+            try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());) {
                 try (JdbcConnection connection = db.connect()) {
                 	System.out.println("**************************************************************");
                     final Connection jdbc = connection.connection();
@@ -156,8 +136,23 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
             Testing.print("*** Done with rollback TX");
         }
     }
+    
+    protected Configuration.Builder dbConfig() {
+        return DATABASE.defaultConfig()
+                            .with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", DATABASE.getConnInfo().get("hostname").toString()))
+                            .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", DATABASE.getConnInfo().get("port").toString()))
+                            .with(MySqlConnectorConfig.USER, DATABASE.getConnInfo().get("user").toString())
+                            .with(MySqlConnectorConfig.PASSWORD, DATABASE.getConnInfo().get("password").toString())
+                            .with(MySqlConnectorConfig.SERVER_ID, 18765)
+                            .with(MySqlConnectorConfig.SERVER_NAME, DATABASE.getServerName())
+                            .with(MySqlConnectorConfig.SSL_MODE, SecureConnectionMode.DISABLED)
+                            .with(MySqlConnectorConfig.POLL_INTERVAL_MS, 10)
+                  	        .with(MySqlConnectorConfig.DATABASE_WHITELIST, DATABASE.getDatabaseName())
+                  	        .with(MySqlConnectorConfig.DATABASE_HISTORY, FileDatabaseHistory.class)
+                  	        .with(MySqlConnectorConfig.INCLUDE_SCHEMA_CHANGES, true);
+    }
 
-    @Test(groups = {"test"})
+    @Test(groups = {"buffer"})
     public void shouldProcessSavepoint() throws SQLException, InterruptedException {
         String masterPort = System.getProperty("database.port", "3306");
         String replicaPort = System.getProperty("database.replica.port", "3306");
@@ -169,20 +164,9 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
 
         // Use the DB configuration to define the connector's configuration to use the "replica"
         // which may be the same as the "master" ...
-        config = Configuration.create()
-                              .with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", externalConfig.get("hostname").toString()))
-                              .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", externalConfig.get("port").toString()))
-                              .with(MySqlConnectorConfig.USER, externalConfig.get("user").toString())
-                              .with(MySqlConnectorConfig.PASSWORD, externalConfig.get("password").toString())
-                              .with(MySqlConnectorConfig.SERVER_ID, 18765)
-                              .with(MySqlConnectorConfig.SERVER_NAME, DATABASE.getServerName())
-                              .with(MySqlConnectorConfig.SSL_MODE, SecureConnectionMode.DISABLED)
-                              .with(MySqlConnectorConfig.POLL_INTERVAL_MS, 10)
-                              .with(MySqlConnectorConfig.DATABASE_WHITELIST, DATABASE.getDatabaseName())
-                              .with(MySqlConnectorConfig.DATABASE_HISTORY, FileDatabaseHistory.class)
-                              .with(MySqlConnectorConfig.INCLUDE_SCHEMA_CHANGES, true)
-                              .with(FileDatabaseHistory.FILE_PATH, DB_HISTORY_PATH)
-                              .build();
+        config = dbConfig()
+                .with(FileDatabaseHistory.FILE_PATH, DB_HISTORY_PATH)
+                .build();
 
         // Start the connector ...
         start(MySqlConnector.class, config);
@@ -193,7 +177,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         // ---------------------------------------------------------------------------------------------------------------
         // Transaction with savepoint
         // ---------------------------------------------------------------------------------------------------------------
-        try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), externalConfig);) {
+        try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());) {
             try (JdbcConnection connection = db.connect()) {
                 final Connection jdbc = connection.connection();
                 connection.setAutoCommit(false);
@@ -219,7 +203,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         Testing.print("*** Done with savepoint TX");
     }
 
-    @Test(groups = {"test"})
+    @Test(groups = {"buffer"})
     public void shouldProcessLargeTransaction() throws SQLException, InterruptedException {
         String masterPort = System.getProperty("database.port", "3306");
         String replicaPort = System.getProperty("database.replica.port", "3306");
@@ -231,21 +215,10 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
 
         // Use the DB configuration to define the connector's configuration to use the "replica"
         // which may be the same as the "master" ...
-        config = Configuration.create()
-        		              .with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", externalConfig.get("hostname").toString()))
-                              .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", externalConfig.get("port").toString()))
-                              .with(MySqlConnectorConfig.USER, externalConfig.get("user").toString())
-                              .with(MySqlConnectorConfig.PASSWORD, externalConfig.get("password").toString())
-                              .with(MySqlConnectorConfig.SERVER_ID, 18765)
-                              .with(MySqlConnectorConfig.SERVER_NAME, DATABASE.getServerName())
-                              .with(MySqlConnectorConfig.SSL_MODE, SecureConnectionMode.DISABLED)
-                              .with(MySqlConnectorConfig.POLL_INTERVAL_MS, 10)
-                              .with(MySqlConnectorConfig.DATABASE_WHITELIST, DATABASE.getDatabaseName())
-                              .with(MySqlConnectorConfig.DATABASE_HISTORY, FileDatabaseHistory.class)
-                              .with(MySqlConnectorConfig.INCLUDE_SCHEMA_CHANGES, true)
-                              .with(MySqlConnectorConfig.BUFFER_SIZE_FOR_BINLOG_READER, 9)
-                              .with(FileDatabaseHistory.FILE_PATH, DB_HISTORY_PATH)
-                              .build();
+        config = dbConfig()
+                .with(MySqlConnectorConfig.BUFFER_SIZE_FOR_BINLOG_READER, 9)
+                .with(FileDatabaseHistory.FILE_PATH, DB_HISTORY_PATH)
+                .build();
 
         // Start the connector ...
         start(MySqlConnector.class, config);
@@ -257,7 +230,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         // ---------------------------------------------------------------------------------------------------------------
         // Transaction with many events
         // ---------------------------------------------------------------------------------------------------------------
-        try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), externalConfig);) {
+        try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());) {
             final int numRecords = 40;
             try (JdbcConnection connection = db.connect()) {
             	//System.out.println("+++++++++++++++++++++++++++++++++");
@@ -278,10 +251,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
                 });
                 connection.setAutoCommit(true);
             }
-            //TimeUnit.SECONDS.sleep(10);
-            //System.out.println("----------------------------");
             
-
             // All records should be present only once
             records = consumeRecordsByTopic(numRecords);
             int recordIndex = 0;
@@ -297,7 +267,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
     }
 
     @FixFor("DBZ-411")
-    @Test(groups = {"test"})
+    @Test(groups = {"buffer"})
     public void shouldProcessRolledBackSavepoint() throws SQLException, InterruptedException {
         String masterPort = System.getProperty("database.port", "3306");
         String replicaPort = System.getProperty("database.replica.port", "3306");
@@ -309,20 +279,9 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
 
         // Use the DB configuration to define the connector's configuration to use the "replica"
         // which may be the same as the "master" ...
-        config = Configuration.create()
-        		              .with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", externalConfig.get("hostname").toString()))
-                              .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", externalConfig.get("port").toString()))
-                              .with(MySqlConnectorConfig.USER, externalConfig.get("user").toString())
-                              .with(MySqlConnectorConfig.PASSWORD, externalConfig.get("password").toString())
-                              .with(MySqlConnectorConfig.SERVER_ID, 18765)
-                              .with(MySqlConnectorConfig.SERVER_NAME, DATABASE.getServerName())
-                              .with(MySqlConnectorConfig.SSL_MODE, SecureConnectionMode.DISABLED)
-                              .with(MySqlConnectorConfig.POLL_INTERVAL_MS, 10)
-                              .with(MySqlConnectorConfig.DATABASE_WHITELIST, DATABASE.getDatabaseName())
-                              .with(MySqlConnectorConfig.DATABASE_HISTORY, FileDatabaseHistory.class)
-                              .with(MySqlConnectorConfig.INCLUDE_SCHEMA_CHANGES, true)
-                              .with(FileDatabaseHistory.FILE_PATH, DB_HISTORY_PATH)
-                              .build();
+        config = dbConfig()
+                .with(FileDatabaseHistory.FILE_PATH, DB_HISTORY_PATH)
+                .build();
 
         // Start the connector ...
         start(MySqlConnector.class, config);
@@ -335,7 +294,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         // supported only for non-GTID setup
         // ---------------------------------------------------------------------------------------------------------------
         if (replicaIsMaster) {
-            try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), externalConfig);) {
+            try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());) {
                 try (JdbcConnection connection = db.connect()) {
                     final Connection jdbc = connection.connection();
                     connection.setAutoCommit(false);
