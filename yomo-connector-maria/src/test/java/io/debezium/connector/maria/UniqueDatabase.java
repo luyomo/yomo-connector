@@ -190,7 +190,7 @@ public class UniqueDatabase {
     public void dropDB(Map<String, Object> urlProperties) {
     	try {
             try (MySQLConnection connection = MySQLConnection.forTestDatabase(DEFAULT_DATABASE, urlProperties)) {
-                connection.execute("drop database " + this.databaseName );
+                connection.execute("drop database if exists " + this.databaseName );
             }
         } catch (final Exception e) {
             throw new IllegalStateException(e);
@@ -203,7 +203,7 @@ public class UniqueDatabase {
     public void dropDB() {
     	try {
             try (MySQLConnection connection = MySQLConnection.forTestDatabase(DEFAULT_DATABASE, dbConnInfo)) {
-                connection.execute("drop database " + this.databaseName );
+                connection.execute("drop database if exists " + this.databaseName );
             }
         } catch (final Exception e) {
             throw new IllegalStateException(e);

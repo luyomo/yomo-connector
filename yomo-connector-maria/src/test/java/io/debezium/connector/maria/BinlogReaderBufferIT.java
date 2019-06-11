@@ -78,7 +78,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         }
     }
 
-    @Test(groups = {"test","buffer"})
+    @Test(groups = {"buffer"})
     public void shouldCorrectlyManageRollback() throws SQLException, InterruptedException {
         String masterPort = System.getProperty("database.port", "3306");
         String replicaPort = System.getProperty("database.replica.port", "3306");

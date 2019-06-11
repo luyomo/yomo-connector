@@ -5,24 +5,37 @@
  */
 package io.debezium.connector.maria;
 
+import org.apache.kafka.connect.errors.ConnectException;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class ConnectionIT {
+	private final UniqueDatabase DATABASE = new UniqueDatabase("readbinlog", "readbinlog_test");
+	
+	@BeforeClass(groups = {"test"})
+	public void setUp() {
+		DATABASE.setConnInfo("jdbc");
+	}
+	
+	@AfterClass(groups = {"test"})
+	public void afterClass() {
+		DATABASE.dropDB();
+	}
 
-    @Test
+    @Test(groups = {"base"})
     public void shouldConnectToDefaultDatabase() throws SQLException {
-        try (MySQLConnection conn = MySQLConnection.forTestDatabase("mysql");) {
+        try (MySQLConnection conn = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
             conn.connect();
         }
     }
 
-    @Test
+    @Test(groups = {"base"})
     public void shouldDoStuffWithDatabase() throws SQLException {
-        final UniqueDatabase DATABASE = new UniqueDatabase("readbinlog", "readbinlog_test");
         DATABASE.createAndInitialize();
-        try (MySQLConnection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName());) {
+        try (MySQLConnection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());) {
             conn.connect();
             // Set up the table as one transaction and wait to see the events ...
             conn.execute("DROP TABLE IF EXISTS person",
@@ -40,9 +53,9 @@ public class ConnectionIT {
         }
     }
 
-	@Test
+	@Test(expectedExceptions = SQLException.class, expectedExceptionsMessageRegExp = ".*Unknown database.*", groups = {"base"})
     public void shouldConnectToEmptyDatabase() throws SQLException {
-        try (MySQLConnection conn = MySQLConnection.forTestDatabase("emptydb");) {
+        try (MySQLConnection conn = MySQLConnection.forTestDatabase("emptydb",DATABASE.getConnInfo());) {
             conn.connect();
         }
     }
