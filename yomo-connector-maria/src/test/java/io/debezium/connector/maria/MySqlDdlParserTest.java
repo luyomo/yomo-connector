@@ -39,14 +39,14 @@ public class MySqlDdlParserTest {
     protected Tables tables;
     protected SimpleDdlParserListener listener;
 
-    @BeforeMethod
+    @BeforeMethod(groups = {"test","ddl"})
 	public void beforeEach() {
         listener = new SimpleDdlParserListener();
         parser = new MysqlDdlParserWithSimpleTestListener(listener);
         tables = new Tables();
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseMultipleStatements() {
         String ddl = "CREATE TABLE foo ( " + System.lineSeparator()
                 + " c1 INTEGER NOT NULL, " + System.lineSeparator()
@@ -60,7 +60,7 @@ public class MySqlDdlParserTest {
         listener.assertNext().dropTableNamed("foo").ddlMatches("DROP TABLE foo");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterStatementsAfterCreate() {
         String ddl1 = "CREATE TABLE foo ( c1 INTEGER NOT NULL, c2 VARCHAR(22) );" + System.lineSeparator();
         String ddl2 = "ALTER TABLE foo ADD COLUMN c bigint;" + System.lineSeparator();
@@ -70,14 +70,14 @@ public class MySqlDdlParserTest {
         listener.assertNext().alterTableNamed("foo").ddlStartsWith("ALTER TABLE foo ADD COLUMN c");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterStatementsWithoutCreate() {
         String ddl = "ALTER TABLE foo ADD COLUMN c bigint;" + System.lineSeparator();
         parser.parse(ddl, tables);
         listener.assertNext().alterTableNamed("foo").ddlStartsWith("ALTER TABLE foo ADD COLUMN c");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableStatementWithSingleGeneratedAndPrimaryKeyColumn() {
         String ddl = "CREATE TABLE foo ( " + System.lineSeparator()
                 + " c1 INTEGER NOT NULL AUTO_INCREMENT, " + System.lineSeparator()
@@ -93,7 +93,7 @@ public class MySqlDdlParserTest {
         assertColumn(foo, "c2", "VARCHAR", Types.VARCHAR, 22, -1, true, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableStatementWithSingleGeneratedColumnAsPrimaryKey() {
         String ddl = "CREATE TABLE my.foo ( " + System.lineSeparator()
                 + " c1 INTEGER NOT NULL AUTO_INCREMENT, " + System.lineSeparator()
@@ -113,7 +113,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableStatementWithMultipleColumnsForPrimaryKey() {
         String ddl = "CREATE TABLE shop ("
                 + " id BIGINT(20) NOT NULL AUTO_INCREMENT,"
@@ -139,7 +139,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-474")
     public void shouldParseCreateTableStatementWithCollate() {
         String ddl = "CREATE TABLE c1 (pk INT PRIMARY KEY, v1 CHAR(36) NOT NULL COLLATE utf8_unicode_ci);";
@@ -152,7 +152,7 @@ public class MySqlDdlParserTest {
         assertThat(column.typeUsesCharset()).isTrue();
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-646")
     public void shouldParseTokuDBTable() {
         String ddl1 = "CREATE TABLE foo ( " + System.lineSeparator()
@@ -173,7 +173,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-990")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseEngineNameWithApostrophes() {
         String ddl = "CREATE TABLE t1 (id INT PRIMARY KEY) ENGINE 'InnoDB'"
                 + "CREATE TABLE t2 (id INT PRIMARY KEY) ENGINE `InnoDB`"
@@ -190,7 +190,7 @@ public class MySqlDdlParserTest {
         .containsOnly("t1", "t2", "t3", "t4");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateUserTable() {
         String ddl = "CREATE TABLE IF NOT EXISTS user (   Host char(60) binary DEFAULT '' NOT NULL, User char(32) binary DEFAULT '' NOT NULL, Select_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Insert_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Update_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Delete_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Create_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Drop_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Reload_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Shutdown_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Process_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, File_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Grant_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, References_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Index_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Alter_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Show_db_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Super_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Create_tmp_table_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Lock_tables_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Execute_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Repl_slave_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Repl_client_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Create_view_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Show_view_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Create_routine_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Alter_routine_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Create_user_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Event_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Trigger_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, Create_tablespace_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, ssl_type enum('','ANY','X509', 'SPECIFIED') COLLATE utf8_general_ci DEFAULT '' NOT NULL, ssl_cipher BLOB NOT NULL, x509_issuer BLOB NOT NULL, x509_subject BLOB NOT NULL, max_questions int(11) unsigned DEFAULT 0  NOT NULL, max_updates int(11) unsigned DEFAULT 0  NOT NULL, max_connections int(11) unsigned DEFAULT 0  NOT NULL, max_user_connections int(11) unsigned DEFAULT 0  NOT NULL, plugin char(64) DEFAULT 'mysql_native_password' NOT NULL, authentication_string TEXT, password_expired ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, password_last_changed timestamp NULL DEFAULT NULL, password_lifetime smallint unsigned NULL DEFAULT NULL, account_locked ENUM('N', 'Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL, PRIMARY KEY Host (Host,User) ) engine=MyISAM CHARACTER SET utf8 COLLATE utf8_bin comment='Users and global privileges';";
         parser.parse(ddl, tables);
@@ -204,7 +204,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableStatementWithSignedTypes() {
         String ddl = "CREATE TABLE foo ( " + System.lineSeparator()
                 + " c1 BIGINT SIGNED NOT NULL, " + System.lineSeparator()
@@ -220,7 +220,7 @@ public class MySqlDdlParserTest {
         assertColumn(foo, "c2", "INT UNSIGNED", Types.INTEGER, -1, -1, false, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableStatementWithCharacterSetForTable() {
         String ddl = "CREATE TABLE t ( col1 VARCHAR(25) ) DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci; ";
         parser.parse(ddl, tables);
@@ -259,7 +259,7 @@ public class MySqlDdlParserTest {
         assertColumn(t4, "col1", "VARCHAR", Types.VARCHAR, 25, -1, true, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableStatementWithCharacterSetForColumns() {
         String ddl = "CREATE TABLE t ( col1 VARCHAR(25) CHARACTER SET greek ); ";
         parser.parse(ddl, tables);
@@ -271,7 +271,7 @@ public class MySqlDdlParserTest {
         assertColumn(t, "col1", "VARCHAR", Types.VARCHAR, 25, -1, true, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterTableStatementThatAddsCharacterSetForColumns() {
         String ddl = "CREATE TABLE t ( col1 VARCHAR(25) ); ";
         parser.parse(ddl, tables);
@@ -299,7 +299,7 @@ public class MySqlDdlParserTest {
         assertColumn(t3, "col1", "VARCHAR", Types.VARCHAR, 75, "utf8", true);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateDatabaseAndTableThatUsesDefaultCharacterSets() {
         String ddl = "SET character_set_server=utf8;" + System.lineSeparator()
                 + "CREATE DATABASE db1 CHARACTER SET utf8mb4;" + System.lineSeparator()
@@ -344,7 +344,7 @@ public class MySqlDdlParserTest {
         assertColumn(t2, "c3", "VARCHAR", Types.VARCHAR, 255, "latin2", false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateDatabaseAndUseDatabaseStatementsAndHaveCharacterEncodingVariablesUpdated() {
         parser.parse("SET character_set_server=utf8;", tables);
         assertVariable("character_set_server", "utf8");
@@ -379,7 +379,7 @@ public class MySqlDdlParserTest {
         assertVariable("character_set_database", "latin2");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSetCharacterSetStatement() {
         parser.parse("SET character_set_server=utf8;", tables);
         assertVariable("character_set_server", "utf8");
@@ -432,7 +432,7 @@ public class MySqlDdlParserTest {
         assertVariable("character_set_database", "LATIN1");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSetNamesStatement() {
         parser.parse("SET character_set_server=utf8;", tables);
         assertVariable("character_set_server", "utf8");
@@ -477,7 +477,7 @@ public class MySqlDdlParserTest {
         assertVariable("character_set_database", "LATIN1");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterTableStatementAddColumns() {
         String ddl = "CREATE TABLE t ( col1 VARCHAR(25) ); ";
         parser.parse(ddl, tables);
@@ -515,7 +515,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-660")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterTableStatementAddConstraintUniqueKey() {
         String ddl = "CREATE TABLE t ( col1 VARCHAR(25) ); ";
         parser.parse(ddl, tables);
@@ -541,7 +541,7 @@ public class MySqlDdlParserTest {
     }
 
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableWithEnumAndSetColumns() {
         String ddl = "CREATE TABLE t ( c1 ENUM('a','b','c') NOT NULL, c2 SET('a','b','c') NULL);";
         parser.parse(ddl, tables);
@@ -556,7 +556,7 @@ public class MySqlDdlParserTest {
         assertThat(t.columnWithName("c2").position()).isEqualTo(2);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseDefiner() {
         String function = "FUNCTION fnA( a int, b int ) RETURNS tinyint(1) begin -- anything end;";
         String ddl = "CREATE DEFINER='mysqluser'@'%' " + function;
@@ -585,7 +585,7 @@ public class MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-169")
     public void shouldParseTimeWithNowDefault() {
         String ddl = "CREATE TABLE t1 ( "
@@ -610,7 +610,7 @@ public class MySqlDdlParserTest {
         assertThat(t.columnWithName("c4").position()).isEqualTo(4);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-169")
     public void shouldParseCreateAndAlterWithOnUpdate() {
         String ddl = "CREATE TABLE customers ( "
@@ -656,7 +656,7 @@ public class MySqlDdlParserTest {
         assertThat(t.columnWithName("name").position()).isEqualTo(5);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseGrantStatement() {
         String ddl = "GRANT ALL PRIVILEGES ON `mysql`.* TO 'mysqluser'@'%'";
         parser.parse(ddl, tables);
@@ -664,21 +664,21 @@ public class MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSetOfOneVariableStatementWithoutTerminator() {
         String ddl = "set character_set_client=utf8";
         parser.parse(ddl, tables);
         assertVariable("character_set_client", "utf8");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSetOfOneVariableStatementWithTerminator() {
         String ddl = "set character_set_client = utf8;";
         parser.parse(ddl, tables);
         assertVariable("character_set_client", "utf8");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSetOfSameVariableWithDifferentScope() {
         String ddl = "SET GLOBAL sort_buffer_size=1000000, SESSION sort_buffer_size=1000000";
         parser.parse(ddl, tables);
@@ -686,7 +686,7 @@ public class MySqlDdlParserTest {
         assertSessionVariable("sort_buffer_size", "1000000");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSetOfMultipleVariablesWithInferredScope() {
         String ddl = "SET GLOBAL v1=1, v2=2";
         parser.parse(ddl, tables);
@@ -695,7 +695,7 @@ public class MySqlDdlParserTest {
         assertSessionVariable("v2", null);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSetOfGlobalVariable() {
         String ddl = "SET GLOBAL v1=1; SET @@global.v2=2";
         parser.parse(ddl, tables);
@@ -705,7 +705,7 @@ public class MySqlDdlParserTest {
         assertSessionVariable("v2", null);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSetOfLocalVariable() {
         String ddl = "SET LOCAL v1=1; SET @@local.v2=2";
         parser.parse(ddl, tables);
@@ -717,7 +717,7 @@ public class MySqlDdlParserTest {
         assertGlobalVariable("v2", null);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSetOfSessionVariable() {
         String ddl = "SET SESSION v1=1; SET @@session.v2=2";
         parser.parse(ddl, tables);
@@ -729,7 +729,7 @@ public class MySqlDdlParserTest {
         assertGlobalVariable("v2", null);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButNotSetUserVariableWithUnderscoreDelimiter() {
         String ddl = "SET @a_b_c_d:=1";
         parser.parse(ddl, tables);
@@ -738,14 +738,14 @@ public class MySqlDdlParserTest {
         assertGlobalVariable("a_b_c_d", null);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseVariableWithUnderscoreDelimiter() {
         String ddl = "SET a_b_c_d=1";
         parser.parse(ddl, tables);
         assertSessionVariable("a_b_c_d", "1");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAndIgnoreDeleteStatements() {
         String ddl = "DELETE FROM blah";
         parser.parse(ddl, tables);
@@ -753,7 +753,7 @@ public class MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAndIgnoreInsertStatements() {
         String ddl = "INSERT INTO blah (id) values (1)";
         parser.parse(ddl, tables);
@@ -761,7 +761,7 @@ public class MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseStatementsWithQuotedIdentifiers() {
         parser.parse(readFile("ddl/mysql-quoted.ddl"), tables);
         Testing.print(tables);
@@ -773,7 +773,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.forTable("connector_test_ro", null, "orders")).isNotNull();
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseIntegrationTestSchema() {
         parser.parse(readFile("ddl/mysql-integration.ddl"), tables);
         Testing.print(tables);
@@ -781,7 +781,7 @@ public class MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(17);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateStatements() {
         parser.parse(readFile("ddl/mysql-test-create.ddl"), tables);
         Testing.print(tables);
@@ -789,7 +789,7 @@ public class MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(144);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseStatementForDbz106() {
         parser.parse(readFile("ddl/mysql-dbz-106.ddl"), tables);
         Testing.print(tables);
@@ -797,7 +797,7 @@ public class MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseStatementForDbz123() {
         parser.parse(readFile("ddl/mysql-dbz-123.ddl"), tables);
         Testing.print(tables);
@@ -805,7 +805,7 @@ public class MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseTestStatements() {
         parser.parse(readFile("ddl/mysql-test-statements.ddl"), tables);
         Testing.print(tables);
@@ -814,14 +814,14 @@ public class MySqlDdlParserTest {
         listener.forEach(this::printEvent);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseSomeLinesFromCreateStatements() {
         parser.parse(readLines(189, "ddl/mysql-test-create.ddl"), tables);
         assertThat(tables.size()).isEqualTo(39);
         assertThat(listener.total()).isEqualTo(120);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseMySql56InitializationStatements() {
         // Skip for legacy parser as default value parsing is failing
         if (parser instanceof MysqlDdlParserWithSimpleTestListener) {
@@ -833,7 +833,7 @@ public class MySqlDdlParserTest {
         listener.forEach(this::printEvent);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseMySql57InitializationStatements() {
         parser.parse(readLines(1, "ddl/mysql-test-init-5.7.ddl"), tables);
         assertThat(tables.size()).isEqualTo(123);
@@ -842,7 +842,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-162")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAndIgnoreCreateFunction() {
         parser.parse(readFile("ddl/mysql-dbz-162.ddl"), tables);
         Testing.print(tables);
@@ -852,7 +852,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-667")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseScientificNotationNumber() {
         String ddl = "CREATE TABLE t (id INT NOT NULL, myvalue DOUBLE DEFAULT 1E10, PRIMARY KEY (`id`));"
                 + "CREATE TABLE t (id INT NOT NULL, myvalue DOUBLE DEFAULT 1.3E-10, PRIMARY KEY (`id`));"
@@ -864,7 +864,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-162")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterTableWithNewlineFeeds() {
         String ddl = "CREATE TABLE `test` (id INT(11) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT);";
         parser.parse(ddl, tables);
@@ -886,7 +886,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-176")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButIgnoreCreateTriggerWithDefiner() {
         parser.parse(readFile("ddl/mysql-dbz-176.ddl"), tables);
         Testing.print(tables);
@@ -896,7 +896,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-193")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseFulltextKeyInCreateTable() {
         parser.parse(readFile("ddl/mysql-dbz-193.ddl"), tables);
         Testing.print(tables);
@@ -923,7 +923,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseProcedureWithCase() {
         parser.parse(readFile("ddl/mysql-dbz-198b.ddl"), tables);
         Testing.print(tables);
@@ -931,7 +931,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-415")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseProcedureEmbeddedIfs() {
         parser.parse(readFile("ddl/mysql-dbz-415a.ddl"), tables);
         Testing.print(tables);
@@ -939,7 +939,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-415")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseProcedureIfWithParenthesisStart() {
         parser.parse(readFile("ddl/mysql-dbz-415b.ddl"), tables);
         Testing.print(tables);
@@ -947,7 +947,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButIgnoreCreateFunctionWithDefiner() {
         parser.parse(readFile("ddl/mysql-dbz-198a.ddl"), tables);
         Testing.print(tables);
@@ -957,7 +957,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButIgnoreCreateFunctionC() {
         parser.parse(readFile("ddl/mysql-dbz-198c.ddl"), tables);
         Testing.print(tables);
@@ -967,7 +967,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButIgnoreCreateFunctionD() {
         parser.parse(readFile("ddl/mysql-dbz-198d.ddl"), tables);
         Testing.print(tables);
@@ -977,7 +977,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButIgnoreCreateFunctionE() {
         parser.parse(readFile("ddl/mysql-dbz-198e.ddl"), tables);
         Testing.print(tables);
@@ -987,7 +987,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButIgnoreCreateFunctionF() {
         parser.parse(readFile("ddl/mysql-dbz-198f.ddl"), tables);
         Testing.print(tables);
@@ -997,7 +997,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButIgnoreCreateFunctionG() {
         parser.parse(readFile("ddl/mysql-dbz-198g.ddl"), tables);
         Testing.print(tables);
@@ -1007,7 +1007,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButIgnoreCreateFunctionH() {
         parser.parse(readFile("ddl/mysql-dbz-198h.ddl"), tables);
         Testing.print(tables);
@@ -1017,7 +1017,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterTableWithDropIndex() {
         parser.parse(readFile("ddl/mysql-dbz-198i.ddl"), tables);
         Testing.print(tables);
@@ -1027,7 +1027,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-198")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseButSkipAlterTableWhenTableIsNotKnown() {
         parser.parse(readFile("ddl/mysql-dbz-198j.ddl"), tables);
 //        Testing.Print.enable();
@@ -1038,7 +1038,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-437")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseStringSameAsKeyword() {
         parser.parse(readFile("ddl/mysql-dbz-437.ddl"), tables);
 //        Testing.Print.enable();
@@ -1048,7 +1048,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-200")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseStatementForDbz200() {
         parser.parse(readFile("ddl/mysql-dbz-200.ddl"), tables);
         Testing.print(tables);
@@ -1093,7 +1093,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-204")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterTableThatChangesMultipleColumns() {
         String ddl = "CREATE TABLE `s`.`test` (a INT(11) NULL, b INT NULL, c INT NULL, INDEX i1(b));";
         parser.parse(ddl, tables);
@@ -1122,7 +1122,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseTicketMonsterLiquibaseStatements() {
         parser.parse(readLines(1, "ddl/mysql-ticketmonster-liquibase.ddl"), tables);
         assertThat(tables.size()).isEqualTo(7);
@@ -1130,7 +1130,7 @@ public class MySqlDdlParserTest {
         listener.forEach(this::printEvent);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @SkipForLegacyParser
     public void shouldParseEnumOptions() {
         assertParseEnumAndSetOptions("ENUM('a','b','c')", "a", "b", "c");
@@ -1143,7 +1143,7 @@ public class MySqlDdlParserTest {
         assertParseEnumAndSetOptions("ENUM () CHARACTER SET");
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-476")
     @SkipForLegacyParser
     public void shouldParseEscapedEnumOptions() {
@@ -1153,7 +1153,7 @@ public class MySqlDdlParserTest {
         assertParseEnumAndSetOptions("ENUM(\"a\"\"\",'b','c')", "a\"\"", "b", "c");
     }
 
-   @Test
+   @Test(groups = "ddl")
    @SkipForLegacyParser
     public void shouldParseSetOptions() {
         assertParseEnumAndSetOptions("SET('a','b','c')", "a", "b", "c");
@@ -1167,7 +1167,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-160")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableWithEnumDefault() {
         String ddl = "CREATE TABLE t ( c1 ENUM('a','b','c') NOT NULL DEFAULT 'b', c2 ENUM('a', 'b', 'c') NOT NULL DEFAULT 'a');";
         parser.parse(ddl, tables);
@@ -1181,7 +1181,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-160")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableWithBitDefault() {
         String ddl = "CREATE TABLE t ( c1 Bit(2) NOT NULL DEFAULT b'1', c2 Bit(2) NOT NULL);";
         parser.parse(ddl, tables);
@@ -1195,7 +1195,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-253")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseTableMaintenanceStatements() {
         String ddl = "create table `db1`.`table1` ( `id` int not null, `other` int );";
         ddl += "analyze table `db1`.`table1`;";
@@ -1208,7 +1208,7 @@ public class MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableUnionStatement() {
         final String ddl =
                 "CREATE TABLE `merge_table` (`id` int(11) NOT NULL, `name` varchar(45) DEFAULT NULL, PRIMARY KEY (`id`)) UNION = (`table1`,`table2`) ENGINE=MRG_MyISAM DEFAULT CHARSET=latin1;";
@@ -1220,7 +1220,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-346")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterTableUnionStatement() {
         final String ddl =
                 "CREATE TABLE `merge_table` (`id` int(11) NOT NULL, `name` varchar(45) DEFAULT NULL, PRIMARY KEY (`id`)) ENGINE=MRG_MyISAM DEFAULT CHARSET=latin1;" +
@@ -1233,7 +1233,7 @@ public class MySqlDdlParserTest {
     }
 
     @FixFor("DBZ-419")
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateTableWithUnnamedPrimaryKeyConstraint() {
         final String ddl =
                 "CREATE TABLE IF NOT EXISTS tables_exception (table_name VARCHAR(100), create_date TIMESTAMP DEFAULT NOW(), enabled INT(1), retention int(1) default 30, CONSTRAINT PRIMARY KEY (table_name));";
@@ -1247,7 +1247,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseStatementForDbz142() {
         parser.parse(readFile("ddl/mysql-dbz-142.ddl"), tables);
         Testing.print(tables);
@@ -1266,7 +1266,7 @@ public class MySqlDdlParserTest {
         assertColumn(t2, "c2", "NCHAR", Types.NCHAR, 10, "utf8", true);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-408")
     public void shouldParseCreateTableStatementWithColumnNamedColumn() {
         String ddl = "CREATE TABLE `mytable` ( " + System.lineSeparator()
@@ -1284,7 +1284,7 @@ public class MySqlDdlParserTest {
         assertColumn(mytable, "ghi", "VARCHAR", Types.VARCHAR, 255, -1, false, false, false);
     }
 
-      @Test
+      @Test(groups = "ddl")
       @FixFor("DBZ-428")
       public void shouldParseCreateTableWithTextType() {
           String ddl = "CREATE TABLE DBZ428 ("
@@ -1299,7 +1299,7 @@ public class MySqlDdlParserTest {
           assertColumn(mytable, "limtext", "TEXT", Types.VARCHAR, 20, -1, true, false, false);
       }
 
-      @Test
+      @Test(groups = "ddl")
       @FixFor("DBZ-439")
       public void shouldParseCreateTableWithDoublePrecisionKeyword() {
           String ddl = "CREATE TABLE DBZ439 ("
@@ -1314,7 +1314,7 @@ public class MySqlDdlParserTest {
           assertColumn(mytable, "unldouble", "DOUBLE PRECISION", Types.DOUBLE, -1, -1, true, false, false);
       }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor({"DBZ-408", "DBZ-412"})
     public void shouldParseAlterTableStatementWithColumnNamedColumnWithoutColumnWord() {
         String ddl = "CREATE TABLE `mytable` ( " + System.lineSeparator()
@@ -1377,7 +1377,7 @@ public class MySqlDdlParserTest {
         assertThat(mytableColumnNames).containsOnly("def");
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor({"DBZ-408", "DBZ-412", "DBZ-524"})
     public void shouldParseAlterTableStatementWithColumnNamedColumnWithColumnWord() {
         String ddl = "CREATE TABLE `mytable` ( " + System.lineSeparator()
@@ -1440,7 +1440,7 @@ public class MySqlDdlParserTest {
         assertThat(mytableColumnNames).containsOnly("def");
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-425")
     public void shouldParseAlterTableAlterDefaultColumnValue() {
         String ddl = "CREATE TABLE t ( c1 DEC(2) NOT NULL, c2 FIXED(1,0) NOT NULL);";
@@ -1448,7 +1448,7 @@ public class MySqlDdlParserTest {
         parser.parse(ddl, tables);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void parseDdlForDecAndFixed() {
         String ddl = "CREATE TABLE t ( c1 DEC(2) NOT NULL, c2 FIXED(1,0) NOT NULL, c3 NUMERIC(3) NOT NULL);";
         parser.parse(ddl, tables);
@@ -1462,7 +1462,7 @@ public class MySqlDdlParserTest {
         assertColumn(t, "c3", "NUMERIC", Types.NUMERIC, 3, 0, false, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor({"DBZ-615", "DBZ-727"})
     public void parseDdlForUnscaledDecAndFixed() {
         String ddl = "CREATE TABLE t ( c1 DEC NOT NULL, c2 FIXED(3) NOT NULL, c3 NUMERIC NOT NULL);";
@@ -1477,7 +1477,7 @@ public class MySqlDdlParserTest {
         assertColumn(t, "c3", "NUMERIC", Types.NUMERIC, 10, 0, false, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void parseTableWithPageChecksum() {
         String ddl =
                 "CREATE TABLE t (id INT NOT NULL, PRIMARY KEY (`id`)) PAGE_CHECKSUM=1;" +
@@ -1491,7 +1491,7 @@ public class MySqlDdlParserTest {
         assertColumn(t, "id", "INT", Types.INTEGER, -1, -1, false, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-429")
     public void parseTableWithNegativeDefault() {
         String ddl =
@@ -1505,7 +1505,7 @@ public class MySqlDdlParserTest {
         assertColumn(t, "myvalue", "INT", Types.INTEGER, -1, -1, true, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-475")
     public void parseUserDdlStatements() {
         String ddl =
@@ -1518,7 +1518,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-530")
     public void parsePartitionReorganize() {
         String ddl =
@@ -1528,7 +1528,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-641")
     public void parsePartitionWithEngine() {
         String ddl =
@@ -1547,7 +1547,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.forTable(new TableId(null, null, "flat_view_request_log"))).isNotNull();
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1113")
     public void parseAddMultiplePartitions() {
         String ddl =
@@ -1557,7 +1557,7 @@ public class MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-767")
     public void shouldParseChangeColumnAndKeepName() {
         final String create =
@@ -1595,7 +1595,7 @@ public class MySqlDdlParserTest {
         assertThat(col.typeName()).isEqualTo("TINYINT");
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void parseDefaultValue() {
         String ddl = "CREATE TABLE tmp (id INT NOT NULL, " +
                 "columnA CHAR(60) NOT NULL DEFAULT 'A'," +
@@ -1614,7 +1614,7 @@ public class MySqlDdlParserTest {
         assertThat(table.columnWithName("columnE").defaultValue()).isEqualTo(null);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-860")
     public void shouldTreatPrimaryKeyColumnsImplicitlyAsNonNull() {
         String ddl = "CREATE TABLE data(id INT, PRIMARY KEY (id))"

@@ -6,11 +6,11 @@
     | BinlogReaderBufferIT.java                  | O                  |                                      |
     | BinlogReaderIT.java                        | 9/10               | Waiting the TLS setting in the maria |
     | Configurator.java                          | X                  |                                      |
-    | ConnectionIT.java                          | To fix             |                                      |
-    | MetadataIT.java                            | X                  |                                      |
-    | MySqlAntlrDdlParserTest.java               | X                  |                                      |
+    | ConnectionIT.java                          | O                  |                                      |
+    | MetadataIT.java                            | O                  |                                      |
+    | MySqlAntlrDdlParserTest.java               | O                  |                                      |
     | MySqlDateTimeInKeyIT.java                  | X                  |                                      |
-    | MySqlDdlParserTest.java                    | 93/27              |                                      |
+    | MySqlDdlParserTest.java                    | O                  |                                      |
     | MySqlDecimalColumnIT.java                  | X                  |                                      |
     | MysqlDefaultValueAllZeroTimeIT.java        | X                  |                                      |
     | MysqlDefaultValueIT.java                   | X                  |                                      |

@@ -6,6 +6,7 @@
 
 package io.debezium.connector.maria;
 
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import static org.fest.assertions.Assertions.assertThat;
 
@@ -32,13 +33,14 @@ import io.debezium.util.Testing;
 public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
 
     @Override
+    @BeforeMethod(groups = {"test","ddl"})
     public void beforeEach() {
         listener = new SimpleDdlParserListener();
         parser = new MysqlDdlParserWithSimpleTestListener(listener);
         tables = new Tables();
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldGetExceptionOnParseAlterStatementsWithoutCreate() {
         String ddl = "ALTER TABLE foo ADD COLUMN c bigint;" + System.lineSeparator();
         parser.parse(ddl, tables);
@@ -46,7 +48,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(0);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1220")
     public void shouldParseFloatVariants() {
         final String ddl =
@@ -73,7 +75,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(f3.scale().get()).isEqualTo(4);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1185")
     public void shouldProcessSerialDatatype() {
         final String ddl =
@@ -138,7 +140,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
                 });
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1185")
     public void shouldProcessSerialDefaultValue() {
         final String ddl =
@@ -201,7 +203,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
                 });
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1123")
     public void shouldParseGeneratedColumn() {
         String ddl =
@@ -213,7 +215,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(3);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1186")
     public void shouldParseAlterTableMultiTableOptions() {
         String ddl =
@@ -225,7 +227,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1150")
     public void shouldParseCheckTableKeywords() {
         String ddl =
@@ -251,7 +253,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(table.columnWithName("changed")).isNotNull();
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1233")
     public void shouldParseCheckTableSomeOtherKeyword() {
         String[] otherKeywords = new String[] { "cache", "close", "des_key_file", "end", "export", "flush", "found",
@@ -268,11 +270,13 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
+    @Test(groups = "ddl")
     public void shouldParseAlterStatementsWithoutCreate() {
         // ignore this test - antlr equivalent for it is shouldGetExceptionOnParseAlterStatementsWithoutCreate test
     }
 
     @Override
+    @Test(groups = "ddl")
     public void shouldParseTimeWithNowDefault() {
         String ddl = "CREATE TABLE t1 ( "
                 + "c1 int primary key auto_increment, "
@@ -297,6 +301,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
+    @Test(groups = "ddl")
     public void shouldParseCreateStatements() {
         parser.parse(readFile("ddl/mysql-test-create.ddl"), tables);
         Testing.print(tables);
@@ -306,6 +311,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
+    @Test(groups = "ddl")
     public void shouldParseTestStatements() {
         parser.parse(readFile("ddl/mysql-test-statements-fixed.ddl"), tables);
         Testing.print(tables);
@@ -322,6 +328,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
+    @Test(groups = "ddl")
     public void shouldParseSomeLinesFromCreateStatements() {
         parser.parse(readLines(189, "ddl/mysql-test-create.ddl"), tables);
         assertThat(tables.size()).isEqualTo(39);
@@ -332,6 +339,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
+    @Test(groups = "ddl")
     public void shouldParseMySql56InitializationStatements() {
         parser.parse(readLines(1, "ddl/mysql-test-init-5.6.ddl"), tables);
         assertThat(tables.size()).isEqualTo(85); // 1 table
@@ -341,6 +349,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
+    @Test(groups = "ddl")
     public void shouldParseMySql57InitializationStatements() {
         parser.parse(readLines(1, "ddl/mysql-test-init-5.7.ddl"), tables);
         assertThat(tables.size()).isEqualTo(123);
@@ -350,6 +359,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
+    @Test(groups = "ddl")
     public void shouldParseButSkipAlterTableWhenTableIsNotKnown() {
         parser.parse(readFile("ddl/mysql-dbz-198j.ddl"), tables);
         Testing.print(tables);
@@ -360,7 +370,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(listener.total()).isEqualTo(2 - numberOfAlteredTablesWhichDoesNotExists);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseTruncateStatementsAfterCreate() {
         String ddl1 = "CREATE TABLE foo ( c1 INTEGER NOT NULL, c2 VARCHAR(22) );" + System.lineSeparator();
         String ddl2 = "TRUNCATE TABLE foo" + System.lineSeparator();
@@ -371,7 +381,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(tables.size()).isEqualTo(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateViewStatementStartSelect() {
         String ddl = "CREATE TABLE foo ( " + System.lineSeparator()
                 + " c1 INTEGER NOT NULL AUTO_INCREMENT, " + System.lineSeparator()
@@ -391,7 +401,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertColumn(foo, "c2", "VARCHAR", Types.VARCHAR, 22, -1, true, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseDropView() {
         String ddl = "CREATE TABLE foo ( " + System.lineSeparator()
                 + " c1 INTEGER NOT NULL AUTO_INCREMENT, " + System.lineSeparator()
@@ -408,7 +418,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(foo).isNull();
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1059")
     public void shouldParseAlterTableRename() {
         final String ddl = "USE db;"
@@ -423,7 +433,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(table.columns()).hasSize(1);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateViewStatementColumnAlias() {
         String ddl = "CREATE TABLE foo ( " + System.lineSeparator()
                 + " c1 INTEGER NOT NULL AUTO_INCREMENT, " + System.lineSeparator()
@@ -442,7 +452,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertColumn(foo, "w1", "VARCHAR", Types.VARCHAR, 22, -1, true, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseCreateViewStatementColumnAliasInnerSelect() {
         String ddl = "CREATE TABLE foo ( " + System.lineSeparator()
                 + " c1 INTEGER NOT NULL AUTO_INCREMENT, " + System.lineSeparator()
@@ -461,7 +471,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertColumn(foo, "w1", "INTEGER", Types.INTEGER, -1, -1, false, true, true);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldParseAlterViewStatementColumnAliasInnerSelect() {
         String ddl = "CREATE TABLE foo ( " + System.lineSeparator()
                 + " c1 INTEGER NOT NULL AUTO_INCREMENT, " + System.lineSeparator()
@@ -482,7 +492,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertColumn(foo, "c2", "VARCHAR", Types.VARCHAR, 22, -1, true, false, false);
     }
 
-    @Test
+    @Test(groups = "ddl")
     public void shouldUseFiltersForAlterTable() {
         parser = new MysqlDdlParserWithSimpleTestListener(listener, TableFilter.fromPredicate(x -> !x.table().contains("ignored")));
 
@@ -507,7 +517,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(c3.typeName()).isEqualTo("TINYINT");
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-903")
     public void shouldParseFunctionNamedDatabase() {
         parser = new MysqlDdlParserWithSimpleTestListener(listener, TableFilter.fromPredicate(x -> !x.table().contains("ignored")));
@@ -516,7 +526,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         parser.parse(ddl, tables);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-910")
     public void shouldParseConstraintCheck() {
         parser = new MysqlDdlParserWithSimpleTestListener(listener, true);
@@ -536,7 +546,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(tables.forTable(null, null, "t3").columns()).hasSize(2);
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1028")
     public void shouldParseCommentWithEngineName() {
         final String ddl =
@@ -557,7 +567,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(columnWithComment.typeName()).isEqualToIgnoringCase("tinytext");
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-780")
     public void shouldRenameColumnWithoutDefinition() {
         parser = new MysqlDdlParserWithSimpleTestListener(listener, TableFilter.fromPredicate(x -> !x.table().contains("ignored")));
@@ -579,7 +589,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(c2.typeName()).isEqualTo("INT");
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-959")
     public void parseAddPartition() {
         String ddl =
@@ -599,7 +609,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(tables.forTable(new TableId(null, null, "flat_view_request_log"))).isNotNull();
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-688")
     public void parseGeomCollection() {
         String ddl = "CREATE TABLE geomtable (id int(11) PRIMARY KEY, collection GEOMCOLLECTION DEFAULT NULL)";
@@ -609,7 +619,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(tables.forTable(new TableId(null, null, "geomtable"))).isNotNull();
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1203")
     public void parseAlterEnumColumnWithNewCharacterSet() {
         String ddl =
@@ -631,7 +641,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
         assertThat(tables.forTable(new TableId(null, null, "test_stations_10"))).isNotNull();
     }
 
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1226")
     public void parseAlterEnumColumnWithEmbeddedOrEscapedCharacters() {
         String ddl =
@@ -654,7 +664,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1226")
     public void shouldParseEnumOptions() {
         // NOTE: We've excluded the ENUM() use cases with empty values based that is not valid
@@ -668,7 +678,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1226")
     public void shouldParseEscapedEnumOptions() {
         assertParseEnumAndSetOptions("ENUM('a''','b','c')", "a'", "b", "c");
@@ -678,7 +688,7 @@ public class MySqlAntlrDdlParserTest extends MySqlDdlParserTest {
     }
 
     @Override
-    @Test
+    @Test(groups = "ddl")
     @FixFor("DBZ-1226")
     public void shouldParseSetOptions() {
         // NOTE: We've excluded the SET() use cases with empty values based that is not valid

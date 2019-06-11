@@ -23,12 +23,13 @@ public class MetadataIT implements Testing {
      * are generated, are not exposed through JDBC (unlike when reading DDL).
      * @throws SQLException if there's an error
      */
-    @Test
+    @Test(groups = {"base"})
     public void shouldLoadMetadataViaJdbc() throws SQLException {
         final UniqueDatabase DATABASE = new UniqueDatabase("readbinlog_it", "readbinlog_test");
+        DATABASE.setConnInfo("jdbc");
         DATABASE.createAndInitialize();
 
-        try (MySQLConnection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName());) {
+        try (MySQLConnection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());) {
             conn.connect();
             // Set up the table as one transaction and wait to see the events ...
             conn.execute("DROP TABLE IF EXISTS person",
