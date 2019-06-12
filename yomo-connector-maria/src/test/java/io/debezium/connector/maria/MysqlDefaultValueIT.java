@@ -13,6 +13,8 @@ import static org.fest.assertions.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Time;
 import java.time.Duration;
 import java.time.Instant;
@@ -45,8 +47,9 @@ import io.debezium.util.Testing;
  */
 public class MysqlDefaultValueIT extends AbstractConnectorTest {
 
-    // 4 meta events (set character_set etc.) and then 15 tables with 3 events each (drop DDL, create DDL, insert)
-    private static final int EVENT_COUNT = 4 + 15 * 3;
+	// 4 meta events (set character_set etc + 2*CREATE DATABASE + + DROP DATABASE + USE)
+	// and 15 tables with 3 events each (drop DDL + 2 * create DDL + 2*insert)
+    private static final int EVENT_COUNT = 5 + 15 * 5;
 
     private static final Path DB_HISTORY_PATH = Testing.Files.createTestingPath("file-db-history-connect.txt").toAbsolutePath();
     private final UniqueDatabase DATABASE = new UniqueDatabase("myServer1", "default_value")
@@ -54,26 +57,44 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @BeforeMethod
-	public void beforeEach() {
+    @BeforeMethod(groups = {"test", "default"})
+	public void beforeEach()  throws SQLException, InterruptedException {
         stopConnector();
+        DATABASE.setConnInfo("jdbc");
+        try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
+            try (JdbcConnection connection = db.connect()) {
+                final Connection jdbc = connection.connection();
+               
+                final Statement statement = jdbc.createStatement();
+                statement.executeUpdate("reset master");  
+            }
+        }
         DATABASE.createAndInitialize();
         initializeConnectorTestFramework();
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @AfterMethod
+    @AfterMethod(groups = {"test", "default"})
 	public void afterEach() {
         try {
             stopConnector();
+            DATABASE.dropDB();
         } finally {
             Testing.Files.delete(DB_HISTORY_PATH);
         }
     }
+    
+    protected Configuration.Builder baseConfig() {
+        return DATABASE.defaultConfig()
+                            .with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", DATABASE.getConnInfo().get("hostname").toString()))
+                            .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", DATABASE.getConnInfo().get("port").toString()))
+                            .with(MySqlConnectorConfig.USER, DATABASE.getConnInfo().get("user").toString())
+                            .with(MySqlConnectorConfig.PASSWORD, DATABASE.getConnInfo().get("password").toString());
+    }
 
-    @Test
+    @Test(groups = {"default"})
     public void unsignedTinyIntTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .with(MySqlConnectorConfig.DDL_PARSER_MODE, "antlr")
                 .build();
@@ -105,9 +126,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "G");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void unsignedSmallIntTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -144,9 +165,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertThat(after.getWithoutDefault(fieldName)).isNull();
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void unsignedMediumIntTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -177,9 +198,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "G");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void unsignedIntTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -210,9 +231,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "G");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void unsignedBigIntToLongTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -243,9 +264,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "G");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void unsignedBigIntToBigDecimalTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .with(MySqlConnectorConfig.BIGINT_UNSIGNED_HANDLING_MODE, JdbcValueConverters.BigIntUnsignedMode.PRECISE)
                 .build();
@@ -278,9 +299,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "G");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void stringTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -310,9 +331,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "I");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void unsignedBitTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -346,9 +367,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "K");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void booleanTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -371,9 +392,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertThat(schemaE.defaultValue()).isEqualTo(null);
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void numberTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -399,9 +420,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertThat(schemaG.defaultValue()).isEqualTo((short) 1);
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void tinyIntBooleanTest() throws Exception {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -409,7 +430,7 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         // Testing.Print.enable();
 
         consumeRecordsByTopic(EVENT_COUNT);
-        try (final Connection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName()).connection()) {
+        try (final Connection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo()).connection()) {
             conn.createStatement().execute("CREATE TABLE ti_boolean_table (" +
                                             "  A TINYINT(1) NOT NULL DEFAULT TRUE," +
                                             "  B TINYINT(2) NOT NULL DEFAULT FALSE" +
@@ -427,9 +448,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertThat(schemaB.defaultValue()).isEqualTo((short) 0);
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void floatAndDoubleTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -447,9 +468,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "H");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void realTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -467,9 +488,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "C");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void numericAndDecimalToDoubleTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .with(MySqlConnectorConfig.DECIMAL_HANDLING_MODE, JdbcValueConverters.DecimalMode.DOUBLE)
                 .build();
@@ -490,9 +511,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "D");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void numericAndDecimalToDecimalTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .with(MySqlConnectorConfig.DECIMAL_HANDLING_MODE, JdbcValueConverters.DecimalMode.PRECISE)
                 .build();
@@ -512,9 +533,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "D");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void dateAndTimeTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .with(MySqlConnectorConfig.TABLE_WHITELIST, DATABASE.qualifiedTableName("DATE_TIME_TABLE"))
                 .build();
@@ -569,16 +590,16 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         ZonedDateTime t5 = ZonedDateTime.ofInstant(Instant.EPOCH, ZoneOffset.UTC);
         String isoString5 = ZonedTimestamp.toIsoString(t5, ZoneOffset.UTC, MySqlValueConverters::adjustTemporal);
         assertThat(schemaJ.defaultValue()).isEqualTo(
-                MySQLConnection.forTestDatabase(DATABASE.getDatabaseName())
+                MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo())
                     .databaseAsserts()
                     .currentDateTimeDefaultOptional(isoString5)
         );
         assertEmptyFieldValue(record, "K");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void timeTypeWithAdaptiveMode() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .with(MySqlConnectorConfig.TABLE_WHITELIST, DATABASE.qualifiedTableName("DATE_TIME_TABLE"))
                 .with(MySqlConnectorConfig.TIME_PRECISION_MODE, TemporalPrecisionMode.ADAPTIVE)
@@ -627,9 +648,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "K");
     }
 
-    @Test
+    @Test(groups = {"default"})
     public void timeTypeWithConnectMode() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .with(MySqlConnectorConfig.TABLE_WHITELIST, DATABASE.qualifiedTableName("DATE_TIME_TABLE"))
                 .with(MySqlConnectorConfig.TIME_PRECISION_MODE, TemporalPrecisionMode.CONNECT)
@@ -686,10 +707,10 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertEmptyFieldValue(record, "K");
     }
 
-    @Test
+    @Test(groups = {"default"})
     @FixFor("DBZ-771")
     public void columnTypeAndDefaultValueChange() throws Exception {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -705,10 +726,9 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertThat(customerTypeSchema.defaultValue()).isEqualTo("b2c");
 
         // Connect to the DB and issue our insert statement to test.
-        try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName())) {
+        try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo()) ) {
             try (JdbcConnection connection = db.connect()) {
                 // Enable Query log option
-                connection.execute("SET binlog_rows_query_log_events=ON");
 
                 connection.execute("alter table DBZ_771_CUSTOMERS change customer_type customer_type int default 42;");
                 connection.execute("insert into DBZ_771_CUSTOMERS (id) values (2);");
@@ -725,10 +745,10 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertThat(customerTypeSchema.defaultValue()).isEqualTo(42);
     }
 
-    @Test
+    @Test(groups = {"default"})
     @FixFor("DBZ-771")
     public void columnTypeChangeResetsDefaultValue() throws Exception {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .build();
         start(MySqlConnector.class, config);
@@ -744,11 +764,8 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertThat(customerTypeSchema.defaultValue()).isEqualTo("b2c");
 
         // Connect to the DB and issue our insert statement to test.
-        try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName())) {
+        try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo())) {
             try (JdbcConnection connection = db.connect()) {
-                // Enable Query log option
-                connection.execute("SET binlog_rows_query_log_events=ON");
-
                 connection.execute("alter table DBZ_771_CUSTOMERS change customer_type customer_type int;");
                 connection.execute("insert into DBZ_771_CUSTOMERS (id, customer_type) values (2, 456);");
             }
@@ -764,10 +781,10 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         assertThat(customerTypeSchema.defaultValue()).isNull();
     }
 
-    @Test
+    @Test(groups = {"default"})
     @FixFor("DBZ-1123")
     public void generatedValueTest() throws InterruptedException {
-        config = DATABASE.defaultConfig()
+        config = baseConfig()
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.INITIAL)
                 .with(MySqlConnectorConfig.DDL_PARSER_MODE, "antlr")
                 .build();
@@ -776,6 +793,7 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         // Testing.Print.enable();
 
         SourceRecords records = consumeRecordsByTopic(EVENT_COUNT);
+        System.out.println("    ----:" + records.allRecordsInOrder());
         SourceRecord record = records.recordsForTopic(DATABASE.topicForTable("GENERATED_TABLE")).get(0);
         validate(record);
 
@@ -787,7 +805,7 @@ public class MysqlDefaultValueIT extends AbstractConnectorTest {
         // Calculated default value is reported as null in schema
         assertThat(schemaB.isOptional()).isEqualTo(true);
         assertThat(schemaB.defaultValue()).isEqualTo(null);
-        assertThat(schemaC.isOptional()).isEqualTo(false);
+        assertThat(schemaC.isOptional()).isEqualTo(true);
         assertThat(schemaC.defaultValue()).isEqualTo(null);
 
         assertThat(recordB).isEqualTo(30);

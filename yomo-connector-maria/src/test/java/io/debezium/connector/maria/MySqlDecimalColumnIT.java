@@ -12,7 +12,9 @@ import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.MapAssert.entry;
 
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +22,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 import io.debezium.config.Configuration;
 import io.debezium.doc.FixFor;
 import io.debezium.embedded.AbstractConnectorTest;
+import io.debezium.jdbc.JdbcConnection;
 import io.debezium.util.Testing;
 
 /**
@@ -38,28 +41,42 @@ public class MySqlDecimalColumnIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @BeforeMethod
-	public void beforeEach() {
+    @BeforeMethod(groups = {"test", "common"})
+	public void beforeEach() throws SQLException, InterruptedException  {
         stopConnector();
+        DATABASE.setConnInfo("jdbc");
+        try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
+            try (JdbcConnection connection = db.connect()) {
+                final Connection jdbc = connection.connection();
+               
+                final Statement statement = jdbc.createStatement();
+                statement.executeUpdate("reset master");  
+            }
+        }
         DATABASE.createAndInitialize();
         initializeConnectorTestFramework();
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @AfterMethod
+    @AfterMethod(groups = {"test", "common"})
 	public void afterEach() {
         try {
             stopConnector();
+            DATABASE.dropDB();
         } finally {
             Testing.Files.delete(DB_HISTORY_PATH);
         }
     }
 
-    @Test
+    @Test(groups = "common")
     @FixFor("DBZ-751")
     public void shouldSetPrecisionSchemaParameter() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
         config = DATABASE.defaultConfig()
+        		.with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", DATABASE.getConnInfo().get("hostname").toString()))
+                .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", DATABASE.getConnInfo().get("port").toString()))
+                .with(MySqlConnectorConfig.USER, DATABASE.getConnInfo().get("user").toString())
+                .with(MySqlConnectorConfig.PASSWORD, DATABASE.getConnInfo().get("password").toString())
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.NEVER)
                 .build();
 

@@ -33,7 +33,7 @@ public class MySqlDateTimeInKeyIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @BeforeMethod(groups = {"test"})
+    @BeforeMethod(groups = {"test", "common"})
 	public void beforeEach() throws SQLException, InterruptedException  {
         stopConnector();
         DATABASE.setConnInfo("jdbc");
@@ -50,7 +50,7 @@ public class MySqlDateTimeInKeyIT extends AbstractConnectorTest {
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @AfterMethod(groups = {"test"})
+    @AfterMethod(groups = {"test", "common"})
 	public void afterEach() {
         try {
             stopConnector();
@@ -60,7 +60,7 @@ public class MySqlDateTimeInKeyIT extends AbstractConnectorTest {
         }
     }
 
-    @Test(groups = "test")
+    @Test(groups = "common")
     @FixFor("DBZ-1194")
     public void shouldAcceptAllZeroDatetimeInPrimaryKey() throws SQLException, InterruptedException {	
         // Use the DB configuration to define the connector's configuration ...

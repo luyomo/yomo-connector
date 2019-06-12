@@ -6,9 +6,9 @@
     | BinlogReaderIT.java                        | 9/10               | Waiting the TLS setting in the maria |
     | Configurator.java                          | X                  |                                      |
     | MySqlDateTimeInKeyIT.java                  | O                  |                                      |
-    | MySqlDecimalColumnIT.java                  | X                  |                                      |
-    | MysqlDefaultValueAllZeroTimeIT.java        | X                  |                                      |
-    | MysqlDefaultValueIT.java                   | X                  |                                      |
+    | MySqlDecimalColumnIT.java                  | O                  |                                      |
+    | MysqlDefaultValueAllZeroTimeIT.java        | O                  |                                      |
+    | MysqlDefaultValueIT.java                   | O                  |                                      |
     | MysqlDefaultValueTest.java                 | 16/1               |                                      |
     | MySqlEnumColumnIT.java                     | X                  |                                      |
     | MySqlFixedLengthBinaryColumnIT.java        | X                  |                                      |
@@ -100,3 +100,17 @@ and ROLLBACK. Thos queries (insert/delte/update) are in the (WRITE_ROWS/UPDATE_R
     |   2 | Query         | 2-223344-2 | CREATE TABLE    | yes       | DROP TABLE               | 2   |
     |   3 | Annotate_rows | 2-223344-3 | INSERT INTO     |           |                          |     |
     |   4 | Annotate_rows | 2-223344-4 | INSERT INTO     |           |                          |     |
+
+** MySqlDefaultValueIT
+*** generatedValueTest
+mariadb does not support [generated] with not null option. The value is mandatory.
+#+BEGIN_SRC
+CREATE TABLE GENERATED_TABLE (
+  A SMALLINT UNSIGNED,
+  B SMALLINT UNSIGNED AS (2 * A),
+  C SMALLINT UNSIGNED AS (3 * A) NOT NULL
+);
+
+#+END_SRC
+*** columnTypeAndDefaultValueChange
+  binlog_rows_query_log_events does not support on the mariadb

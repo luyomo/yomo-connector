@@ -157,11 +157,17 @@ public class UniqueDatabase {
      * @param urlProperties jdbc url properties
      */
     public void createAndInitialize(Map<String, Object> urlProperties) {
+    	
+    	Map<String, Object> connProp = new HashMap<String, Object>();
+    	
+    	connProp.putAll(dbConnInfo);
+    	connProp.putAll(urlProperties);
+    	
         final String ddlFile = String.format("ddl/%s.sql", templateName);
         final URL ddlTestFile = UniqueDatabase.class.getClassLoader().getResource(ddlFile);
         assertNotNull("Cannot locate " + ddlFile, ddlTestFile);
         try {
-            try (MySQLConnection connection = MySQLConnection.forTestDatabase(DEFAULT_DATABASE, urlProperties)) {
+            try (MySQLConnection connection = MySQLConnection.forTestDatabase(DEFAULT_DATABASE, connProp)) {
                 final List<String> statements = Arrays.stream(
                         Stream.concat(
                                 Arrays.stream(CREATE_DATABASE_DDL),
