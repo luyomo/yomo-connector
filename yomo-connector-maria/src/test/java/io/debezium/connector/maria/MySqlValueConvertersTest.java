@@ -31,7 +31,7 @@ public class MySqlValueConvertersTest {
 
     private static final TemporalAdjuster ADJUSTER = MySqlValueConverters::adjustTemporal;
 
-    @Test
+    @Test(groups = {"convert"})
     public void shouldAdjustLocalDateWithTwoDigitYears() {
         assertThat(ADJUSTER.adjustInto(localDateWithYear(00))).isEqualTo(localDateWithYear(2000));
         assertThat(ADJUSTER.adjustInto(localDateWithYear(01))).isEqualTo(localDateWithYear(2001));
@@ -42,7 +42,7 @@ public class MySqlValueConvertersTest {
         assertThat(ADJUSTER.adjustInto(localDateWithYear(99))).isEqualTo(localDateWithYear(1999));
     }
 
-    @Test
+    @Test(groups = {"convert"})
     public void shouldAdjustLocalDateTimeWithTwoDigitYears() {
         assertThat(ADJUSTER.adjustInto(localDateTimeWithYear(00))).isEqualTo(localDateTimeWithYear(2000));
         assertThat(ADJUSTER.adjustInto(localDateTimeWithYear(01))).isEqualTo(localDateTimeWithYear(2001));
@@ -53,51 +53,16 @@ public class MySqlValueConvertersTest {
         assertThat(ADJUSTER.adjustInto(localDateTimeWithYear(99))).isEqualTo(localDateTimeWithYear(1999));
     }
 
-    @Test
+    @Test(groups = {"convert"})
     public void shouldNotAdjustLocalDateWithThreeDigitYears() {
         assertThat(ADJUSTER.adjustInto(localDateWithYear(-1))).isEqualTo(localDateWithYear(-1));
         assertThat(ADJUSTER.adjustInto(localDateWithYear(100))).isEqualTo(localDateWithYear(100));
     }
     
-    @Test
+    @Test(groups = {"convert"})
     public void shouldNotAdjustLocalDateTimeWithThreeDigitYears() {
         assertThat(ADJUSTER.adjustInto(localDateTimeWithYear(-1))).isEqualTo(localDateTimeWithYear(-1));
         assertThat(ADJUSTER.adjustInto(localDateTimeWithYear(100))).isEqualTo(localDateTimeWithYear(100));
-    }
-
-    @Test
-    public void testJsonValues() {
-        String sql = "CREATE TABLE JSON_TABLE (" +
-                "    A JSON," +
-                "    B JSON NOT NULL" +
-                ");";
-
-        MySqlValueConverters converters = new MySqlValueConverters(JdbcValueConverters.DecimalMode.DOUBLE,
-            TemporalPrecisionMode.CONNECT,
-            JdbcValueConverters.BigIntUnsignedMode.LONG);
-
-        DdlParser parser = new MySqlAntlrDdlParser();
-        Tables tables = new Tables();
-        parser.parse(sql, tables);
-        Table table = tables.forTable(new TableId(null, null, "JSON_TABLE"));
-
-        // ColA -  Nullable column
-        Column colA= table.columnWithName("A");
-        Field fieldA = new Field(colA.name(), -1, converters.schemaBuilder(colA).optional().build());
-        assertThat(converters.converter(colA, fieldA).convert("{}")).isEqualTo("{}");
-        assertThat(converters.converter(colA, fieldA).convert("[]")).isEqualTo("[]");
-        assertThat(converters.converter(colA, fieldA).convert(new byte[0])).isNull();
-        assertThat(converters.converter(colA, fieldA).convert(null)).isNull();
-        assertThat(converters.converter(colA, fieldA).convert("{ \"key1\": \"val1\", \"key2\": {\"key3\":\"val3\"} }")).isEqualTo("{ \"key1\": \"val1\", \"key2\": {\"key3\":\"val3\"} }");
-
-        // ColB - NOT NUll column
-        Column colB= table.columnWithName("B");
-        Field fieldB = new Field(colB.name(), -1, converters.schemaBuilder(colB).build());
-        assertThat(converters.converter(colB, fieldB).convert("{}")).isEqualTo("{}");
-        assertThat(converters.converter(colB, fieldB).convert("[]")).isEqualTo("[]");
-        assertThat(converters.converter(colB, fieldB).convert(new byte[0])).isEqualTo("{}");
-        assertThat(converters.converter(colB, fieldB).convert(null)).isEqualTo("{}");
-        assertThat(converters.converter(colB, fieldB).convert("{ \"key1\": \"val1\", \"key2\": {\"key3\":\"val3\"} }")).isEqualTo("{ \"key1\": \"val1\", \"key2\": {\"key3\":\"val3\"} }");
     }
 
     protected LocalDate localDateWithYear(int year) {

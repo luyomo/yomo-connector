@@ -9,6 +9,9 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.Test;
 import org.testng.annotations.BeforeMethod;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 import org.apache.kafka.connect.data.Schema;
 import org.junit.Rule;
@@ -19,6 +22,7 @@ import io.debezium.connector.maria.junit.SkipForLegacyParser;
 import io.debezium.connector.maria.junit.SkipTestForLegacyParser;
 import io.debezium.doc.FixFor;
 import io.debezium.embedded.AbstractConnectorTest;
+import io.debezium.jdbc.JdbcConnection;
 import io.debezium.util.Testing;
 
 import static org.fest.assertions.Assertions.assertThat;
@@ -36,29 +40,43 @@ public class MySqlEnumColumnIT extends AbstractConnectorTest {
     @Rule
     public final TestRule skip = new SkipTestForLegacyParser();
 
-    @BeforeMethod
-	public void beforeEach() {
+    @BeforeMethod(groups = {"test", "column"})
+	public void beforeEach() throws SQLException, InterruptedException {
         stopConnector();
+        DATABASE.setConnInfo("jdbc");
+        try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
+            try (JdbcConnection connection = db.connect()) {
+                final Connection jdbc = connection.connection();
+               
+                final Statement statement = jdbc.createStatement();
+                statement.executeUpdate("reset master");  
+            }
+        }
         DATABASE.createAndInitialize();
         initializeConnectorTestFramework();
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @AfterMethod
+    @AfterMethod(groups = {"test", "column"})
 	public void afterEach() {
         try {
             stopConnector();
+            DATABASE.dropDB();
         }
         finally {
             Testing.Files.delete(DB_HISTORY_PATH);
         }
     }
 
-    @Test
+    @Test(groups = {"column"})
     @FixFor("DBZ-1203")
     public void shouldAlterEnumColumnCharacterSet() throws Exception {
 
         config = DATABASE.defaultConfig()
+        		.with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", DATABASE.getConnInfo().get("hostname").toString()))
+                .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", DATABASE.getConnInfo().get("port").toString()))
+                .with(MySqlConnectorConfig.USER, DATABASE.getConnInfo().get("user").toString())
+                .with(MySqlConnectorConfig.PASSWORD, DATABASE.getConnInfo().get("password").toString())
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.NEVER)
                 .with(MySqlConnectorConfig.TABLE_WHITELIST, DATABASE.qualifiedTableName("test_stations_10"))
                 .build();

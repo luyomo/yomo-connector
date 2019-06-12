@@ -1,56 +1,60 @@
 * Unit test
-    | test case                                  | result             | comment                              |
-    |--------------------------------------------+--------------------+--------------------------------------|
-    | AbstractMysqlDefaultValueTest.java         | X                  |                                      |
-    | MysqlAntlrDefaultValueTest.java            | 19/1               |                                      |
-    | BinlogReaderIT.java                        | 9/10               | Waiting the TLS setting in the maria |
-    | Configurator.java                          | X                  |                                      |
-    | MySqlDateTimeInKeyIT.java                  | O                  |                                      |
-    | MySqlDecimalColumnIT.java                  | O                  |                                      |
-    | MysqlDefaultValueAllZeroTimeIT.java        | O                  |                                      |
-    | MysqlDefaultValueIT.java                   | O                  |                                      |
-    | MysqlDefaultValueTest.java                 | 16/1               |                                      |
-    | MySqlEnumColumnIT.java                     | X                  |                                      |
-    | MySqlFixedLengthBinaryColumnIT.java        | X                  |                                      |
-    | MySqlGeometryIT.java                       | X                  |                                      |
-    | MySqlNumericColumnIT.java                  | X                  |                                      |
-    | MySqlSchemaTest.java                       | 5/5                |                                      |
-    | MySqlSourceTypeInSchemaIT.java             | X                  |                                      |
-    | MySqlTableMaintenanceStatementsIT.java     | X                  |                                      |
-    | MySqlTimestampColumnIT.java                | X                  |                                      |
-    | MySqlUnsignedIntegerIT.java                | X                  |                                      |
-    | MySqlValueConvertersTest.java              | 5/1                |                                      |
-    | MySqlYearIT.java                           | X                  |                                      |
-    | ParallelSnapshotReaderTest.java            | 9/6                |                                      |
-    | ReadBinLogIT.java                          | To fix             |                                      |
-    | SnapshotReaderIT.java                      | X                  |                                      |
-    | SourceInfoTest.java                        | 38/2               |                                      |
-    | TableConvertersTest.java                   | junit=> to convert |                                      |
-    | TopicNameSanitizationIT.java               | X                  |                                      |
-    | ZZZGtidSetIT.java                          | X                  | To fix                               |
-    | MySqlConnectorJsonIT.java                  | Not test           | No need to test json                 |
-    | DatabaseDifferences.java                   | Not test           | Interface                            |
-    | junit/SkipForLegacyParser.java             | Not test           | Interface                            |
-    | junit/SkipTestForLegacyParser.java         | Not test           | Tool                                 |
-    | MySQLConnection.java                       | Not test           | Tool                                 |
-    | UniqueDatabase.java                        | Not test           |                                      |
-    | BinlogReaderBufferIT.java                  | O                  |                                      |
-    | ConnectionIT.java                          | O                  |                                      |
-    | MetadataIT.java                            | O                  |                                      |
-    | MySqlAntlrDdlParserTest.java               | O                  |                                      |
-    | MySqlDdlParserTest.java                    | O                  |                                      |
-    |--------------------------------------------+--------------------+--------------------------------------|
-    | ChainedReaderTest.java                     | O                  |                                      |
-    | FiltersTest.java                           | O                  |                                      |
-    | MySqlConnectorIT.java                      | O                  |                                      |
-    | MySqlConnectorRegressionIT.java            | O                  |                                      |
-    | MySqlConnectorTest.java                    | O                  |                                      |
-    | MySqlUnsignedIntegerConverterTest.java     | O                  |                                      |
-    | MySqlGeometryTest.java                     | O                  |                                      |
-    | ReconcilingBinlogReaderTest.java           | O                  |                                      |
-    | AbstractMySqlConnectorOutputTest.java.2fix | -                  |                                      |
-    | MySqlTaskContextIT.java.2fix               | -                  |                                      |
-    | MySqlTaskContextTest.java.2fix             | -                  |                                      |
+    | test case                                  | result             | success/all | comment                                |
+    |--------------------------------------------+--------------------+-------------+----------------------------------------|
+    | AbstractMysqlDefaultValueTest.java         | X                  |             |                                        |
+    | MysqlAntlrDefaultValueTest.java            | 19/1               |             |                                        |
+    | BinlogReaderIT.java                        | 9/10               |             | Waiting the TLS setting in the maria   |
+    | MySqlGeometryIT.java                       | X                  |             | To do. It's a different domain         |
+    | ParallelSnapshotReaderTest.java            | 9/6                |             |                                        |
+    | ReadBinLogIT.java                          | To fix             |             |                                        |
+    | SnapshotReaderIT.java                      | X                  |             |                                        |
+    | SourceInfoTest.java                        | 38/2               |             | Whether it's need to test for GTID set |
+    | ZZZGtidSetIT.java                          | X                  |             | To fix                                 |
+    |--------------------------------------------+--------------------+-------------+----------------------------------------|
+    | BinlogReaderBufferIT.java                  | O                  |             |                                        |
+    | ConnectionIT.java                          | O                  |             |                                        |
+    | MetadataIT.java                            | O                  |             |                                        |
+    | MySqlAntlrDdlParserTest.java               | O                  |             |                                        |
+    | MySqlDdlParserTest.java                    | O                  |             |                                        |
+    | MySqlDateTimeInKeyIT.java                  | O                  |             |                                        |
+    | MySqlDecimalColumnIT.java                  | O                  |             |                                        |
+    | MysqlDefaultValueAllZeroTimeIT.java        | O                  |             |                                        |
+    | MysqlDefaultValueIT.java                   | O                  |             |                                        |
+    | MySqlEnumColumnIT.java                     | O                  |             |                                        |
+    | MySqlFixedLengthBinaryColumnIT.java        | O                  |             |                                        |
+    | MySqlNumericColumnIT.java                  | O                  |             |                                        |
+    | MySqlTimestampColumnIT.java                | O                  |             |                                        |
+    | MySqlUnsignedIntegerIT.java                | O                  |             |                                        |
+    | MySqlYearIT.java                           | O                  |             |                                        |
+    | MySqlSchemaTest.java                       | O                  | 5/5         |                                        |
+    | MySqlSourceTypeInSchemaIT.java             | O                  | 1/1         |                                        |
+    | MySqlTableMaintenanceStatementsIT.java     | O                  | 1/1         |                                        |
+    | MySqlValueConvertersTest.java              | O                  | 4/4         | Removed JSON test                      |
+    | TopicNameSanitizationIT.java               | O                  |             |                                        |
+    |--------------------------------------------+--------------------+-------------+----------------------------------------|
+    | ChainedReaderTest.java                     | O                  |             |                                        |
+    | FiltersTest.java                           | O                  |             |                                        |
+    | MySqlConnectorIT.java                      | O                  |             |                                        |
+    | MySqlConnectorRegressionIT.java            | O                  |             |                                        |
+    | MySqlConnectorTest.java                    | O                  |             |                                        |
+    | MySqlUnsignedIntegerConverterTest.java     | O                  |             |                                        |
+    | MySqlGeometryTest.java                     | O                  |             |                                        |
+    | ReconcilingBinlogReaderTest.java           | O                  |             |                                        |
+    |--------------------------------------------+--------------------+-------------+----------------------------------------|
+    | AbstractMySqlConnectorOutputTest.java.2fix | -                  |             |                                        |
+    | MySqlTaskContextIT.java.2fix               | -                  |             |                                        |
+    | MySqlTaskContextTest.java.2fix             | -                  |             |                                        |
+    |--------------------------------------------+--------------------+-------------+----------------------------------------|
+    | MysqlDefaultValueTest.java                 | Not test           |             |                                        |
+    | MySqlConnectorJsonIT.java                  | Not test           |             | No need to test json                   |
+    | DatabaseDifferences.java                   | Not test           |             | Interface                              |
+    | junit/SkipForLegacyParser.java             | Not test           |             | Interface                              |
+    | junit/SkipTestForLegacyParser.java         | Not test           |             | Tool                                   |
+    | MySQLConnection.java                       | Not test           |             | Tool                                   |
+    | UniqueDatabase.java                        | Not test           |             |                                        |
+    | TableConvertersTest.java                   | junit=> to convert |             | Not yet implemented                    |
+    | Configurator.java                          | Not test           |             |                                        |
+
 
 ** TODO AbstractMysqlDefaultValueTest.java
 The abstract class how to test

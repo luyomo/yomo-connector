@@ -11,6 +11,7 @@ import org.testng.annotations.BeforeMethod;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -18,6 +19,7 @@ import org.fest.assertions.Assertions;
 import io.debezium.config.Configuration;
 import io.debezium.doc.FixFor;
 import io.debezium.embedded.AbstractConnectorTest;
+import io.debezium.jdbc.JdbcConnection;
 import io.debezium.util.Testing;
 
 /**
@@ -34,25 +36,35 @@ public class MySqlYearIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @BeforeMethod
-	public void beforeEach() {
+    @BeforeMethod(groups = {"test", "column"})
+	public void beforeEach() throws SQLException, InterruptedException  {
         stopConnector();
+        DATABASE.setConnInfo("jdbc");
+        try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
+            try (JdbcConnection connection = db.connect()) {
+                final Connection jdbc = connection.connection();
+               
+                final Statement statement = jdbc.createStatement();
+                statement.executeUpdate("reset master");  
+            }
+        }
         DATABASE.createAndInitialize();
         initializeConnectorTestFramework();
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @AfterMethod
+    @AfterMethod(groups = {"test", "column"})
 	public void afterEach() {
         try {
             stopConnector();
+            DATABASE.dropDB();
         }
         finally {
             Testing.Files.delete(DB_HISTORY_PATH);
         }
     }
 
-    @Test
+    @Test(groups = {"column"})
     @FixFor("DBZ-1143")
     public void shouldProcessTwoAndForDigitYearsInDatabase() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
@@ -68,14 +80,15 @@ public class MySqlYearIT extends AbstractConnectorTest {
         // Consume all of the events due to startup and initialization of the database
         // ---------------------------------------------------------------------------------------------------------------
         Testing.Debug.enable();
-        final int numDatabase = 2;
-        final int numTables = 2;
-        final int numOthers = 2;
-        consumeRecords(numDatabase + numTables + numOthers);
+        final int numDatabase = 3; // 2 CREATE + 1 DROP
+        final int numTables = 3;   // 2 CREATE + 1 DROP
+        final int numOthers = 2;   // 1 SET character_set_server + 1 USE DB
+        final int numInsert = 1;   // Insert in the snapshot
+        consumeRecords(numDatabase + numTables + numOthers + numInsert);
 
         assertChangeRecordByDatabase();
 
-        try (final Connection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName()).connection()) {
+        try (final Connection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo()).connection()) {
             conn.createStatement().execute("INSERT INTO dbz_1143_year_test VALUES (\n" + 
                     "    default,\n" + 
                     "    '18',\n" + 
@@ -103,7 +116,7 @@ public class MySqlYearIT extends AbstractConnectorTest {
         stopConnector();
     }
 
-    @Test
+    @Test(groups = {"column"})
     @FixFor("DBZ-1143")
     public void shouldProcessTwoAndForDigitYearsInConnector() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
@@ -118,14 +131,15 @@ public class MySqlYearIT extends AbstractConnectorTest {
         // Consume all of the events due to startup and initialization of the database
         // ---------------------------------------------------------------------------------------------------------------
         Testing.Debug.enable();
-        final int numDatabase = 2;
-        final int numTables = 2;
-        final int numOthers = 2;
-        consumeRecords(numDatabase + numTables + numOthers);
+        final int numDatabase = 3; // 2 CREATE + 1 DROP
+        final int numTables = 3;   // 2 CREATE + 1 DROP
+        final int numOthers = 2;   // 1 SET character_set_server + 1 USE DB
+        final int numInsert = 1;   // Insert in the snapshot
+        consumeRecords(numDatabase + numTables + numOthers + numInsert);
 
         assertChangeRecordByConnector();
 
-        try (final Connection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName()).connection()) {
+        try (final Connection conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo()).connection()) {
             conn.createStatement().execute("INSERT INTO dbz_1143_year_test VALUES (\n" + 
                     "    default,\n" + 
                     "    '18',\n" + 

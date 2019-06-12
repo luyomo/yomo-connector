@@ -255,7 +255,11 @@ public class UniqueDatabase {
                 .with(MySqlConnectorConfig.DATABASE_WHITELIST, getDatabaseName())
                 .with(MySqlConnectorConfig.DATABASE_HISTORY, FileDatabaseHistory.class)
                 .with(MySqlConnectorConfig.BUFFER_SIZE_FOR_BINLOG_READER, 10_000)
-                .with(MySqlConnectorConfig.DDL_PARSER_MODE, ddlParserMode);
+                .with(MySqlConnectorConfig.DDL_PARSER_MODE, ddlParserMode)
+                .with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", dbConnInfo.get("hostname").toString()))
+                .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", dbConnInfo.get("port").toString()))
+                .with(MySqlConnectorConfig.USER, dbConnInfo.get("user").toString())
+                .with(MySqlConnectorConfig.PASSWORD, dbConnInfo.get("password").toString());
 
         if (dbHistoryPath != null) {
             builder.with(FileDatabaseHistory.FILE_PATH, dbHistoryPath);

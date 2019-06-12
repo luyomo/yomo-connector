@@ -35,7 +35,7 @@ public class MySqlSchemaTest {
     private MySqlSchema mysql;
     private SourceInfo source;
 
-    @BeforeMethod
+    @BeforeMethod(groups = {"test","schema"})
 	public void beforeEach() {
         Testing.Files.delete(TEST_FILE_PATH);
         build = new Configurator();
@@ -43,7 +43,7 @@ public class MySqlSchemaTest {
         source = new SourceInfo();
     }
 
-    @AfterMethod
+    @AfterMethod(groups = {"test","schema"})
 	public void afterEach() {
         if (mysql != null) {
             try {
@@ -54,7 +54,7 @@ public class MySqlSchemaTest {
         }
     }
 
-    @Test
+    @Test(groups = {"schema"})
     public void shouldApplyDdlStatementsAndRecover() throws InterruptedException {
         mysql = build.storeDatabaseHistoryInFile(TEST_FILE_PATH).serverName(SERVER_NAME).createSchemas();
         mysql.start();
@@ -74,7 +74,7 @@ public class MySqlSchemaTest {
         assertHistoryRecorded();
     }
 
-    @Test
+    @Test(groups = {"schema"})
     public void shouldIgnoreUnparseableDdlAndRecover() throws InterruptedException {
         mysql = build
                 .with(DatabaseHistory.SKIP_UNPARSEABLE_DDL_STATEMENTS, true)
@@ -99,7 +99,7 @@ public class MySqlSchemaTest {
         assertHistoryRecorded();
     }
 
-    @Test(expectedExceptions = ParsingException.class)
+    @Test(expectedExceptions = ParsingException.class, groups = {"schema"})
     public void shouldFailOnUnparseableDdl() throws InterruptedException {
         mysql = build
                 .storeDatabaseHistoryInFile(TEST_FILE_PATH)
@@ -115,7 +115,7 @@ public class MySqlSchemaTest {
         mysql.applyDdl(source, "db1", "xxxCREATE TABLE mytable\n" + readFile("ddl/mysql-products.ddl"), this::printStatements);
     }
 
-    @Test
+    @Test(groups = {"schema"})
     public void shouldLoadSystemAndNonSystemTablesAndConsumeOnlyFilteredDatabases() throws InterruptedException {
         mysql = build.storeDatabaseHistoryInFile(TEST_FILE_PATH)
                 .serverName(SERVER_NAME)
@@ -141,7 +141,7 @@ public class MySqlSchemaTest {
         assertHistoryRecorded();
     }
 
-    @Test
+    @Test(groups = {"schema"})
     public void shouldLoadSystemAndNonSystemTablesAndConsumeAllDatabases() throws InterruptedException {
         mysql = build.storeDatabaseHistoryInFile(TEST_FILE_PATH)
                      .serverName(SERVER_NAME)

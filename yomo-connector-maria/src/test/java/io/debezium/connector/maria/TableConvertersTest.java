@@ -6,6 +6,7 @@
 package io.debezium.connector.maria;
 
 import org.testng.annotations.Test;
+import org.junit.Ignore;
 import org.testng.Assert;
 
 /**

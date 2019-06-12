@@ -12,7 +12,9 @@ import static org.fest.assertions.Assertions.assertThat;
 
 import java.math.BigDecimal;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 import org.apache.kafka.connect.data.Decimal;
@@ -28,6 +30,7 @@ import io.debezium.connector.maria.junit.SkipTestForLegacyParser;
 import io.debezium.data.Envelope;
 import io.debezium.doc.FixFor;
 import io.debezium.embedded.AbstractConnectorTest;
+import io.debezium.jdbc.JdbcConnection;
 import io.debezium.util.Testing;
 
 /**
@@ -47,24 +50,34 @@ public class MySqlUnsignedIntegerIT extends AbstractConnectorTest {
     @Rule
     public final TestRule skip = new SkipTestForLegacyParser();
 
-    @BeforeMethod
-	public void beforeEach() {
+    @BeforeMethod(groups = {"test", "column"})
+	public void beforeEach() throws SQLException, InterruptedException {
         stopConnector();
+        DATABASE.setConnInfo("jdbc");
+        try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
+            try (JdbcConnection connection = db.connect()) {
+                final Connection jdbc = connection.connection();
+               
+                final Statement statement = jdbc.createStatement();
+                statement.executeUpdate("reset master");  
+            }
+        }
         DATABASE.createAndInitialize();
         initializeConnectorTestFramework();
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @AfterMethod
+    @AfterMethod(groups = {"test", "column"})
 	public void afterEach() {
         try {
             stopConnector();
+            DATABASE.dropDB();
         } finally {
             Testing.Files.delete(DB_HISTORY_PATH);
         }
     }
 
-    @Test
+    @Test(groups = {"column"})
     public void shouldConsumeAllEventsFromDatabaseUsingBinlogAndNoSnapshot() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
         config = DATABASE.defaultConfig()
@@ -126,7 +139,7 @@ public class MySqlUnsignedIntegerIT extends AbstractConnectorTest {
         assertSerialPrecise(records.recordsForTopic(DATABASE.topicForTable("dbz_1185_serial")));
     }
 
-    @Test
+    @Test(groups = {"column"})
     @FixFor("DBZ-363")
     public void shouldConsumeAllEventsFromBigIntTableInDatabaseUsingBinlogAndNoSnapshotUsingLong() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
@@ -163,7 +176,7 @@ public class MySqlUnsignedIntegerIT extends AbstractConnectorTest {
         assertSerialDefaultValue(records.recordsForTopic(DATABASE.topicForTable("dbz_1185_serial_default_value")));
     }
 
-    @Test
+    @Test(groups = {"column"})
     public void shouldConsumeAllEventsFromDatabaseUsingSnapshot() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
         config = DATABASE.defaultConfig().build();
