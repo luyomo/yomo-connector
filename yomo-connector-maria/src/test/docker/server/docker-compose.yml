@@ -1,0 +1,38 @@
+version: "3.1"
+services:
+  node01:
+    image: "mariadb"
+    environment:
+      - MYSQL_ROOT_PASSWORD=passwd
+      - MYSQL_USER=myConnect
+      - MYSQL_PASSWORD=myConnect
+      - MYSQL_DATABASE=test
+    container_name: "mdbNode01"
+    volumes:
+      - ./node01-my.cnf:/etc/mysql/my.cnf
+      - ../ssl/ca-cert.pem:/etc/mysql/ssl/ca-cert.pem
+      - ../ssl/server-cert.pem:/etc/mysql/ssl/server-cert.pem
+      - ../ssl/server-key.pem:/etc/mysql/ssl/server-key.pem
+
+    networks:
+      - yomo-eclipse
+
+  node02:
+    image: "mariadb"
+    environment:
+      - MYSQL_ROOT_PASSWORD=passwd
+      - MYSQL_USER=myConnect
+      - MYSQL_PASSWORD=myConnect
+      - MYSQL_DATABASE=test
+    container_name: "mdbNode02"
+    volumes:
+      - ./node02-my.cnf:/etc/mysql/my.cnf
+      - ../ssl/ca-cert.pem:/etc/mysql/ssl/ca-cert.pem
+      - ../ssl/server-cert.pem:/etc/mysql/ssl/server-cert.pem
+      - ../ssl/server-key.pem:/etc/mysql/ssl/server-key.pem
+    networks:
+      - yomo-eclipse
+    
+networks:
+  yomo-eclipse:
+    external: true

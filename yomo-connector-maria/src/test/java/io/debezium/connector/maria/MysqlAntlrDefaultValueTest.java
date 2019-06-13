@@ -5,6 +5,7 @@
  */
 package io.debezium.connector.maria;
 
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import static org.fest.assertions.Assertions.assertThat;
 
@@ -25,8 +26,13 @@ public class MysqlAntlrDefaultValueTest extends AbstractMysqlDefaultValueTest {
     {
         parserProducer = MySqlAntlrDdlParser::new;
     }
+    
+    @BeforeClass(groups = {"test", "defaultValue"})
+    public void setUp() {
+        super.setUp();
+    }
 
-    @Test
+    @Test(groups = {"defaultValue"})
     @FixFor("DBZ-870")
     public void shouldAcceptZeroAsDefaultValueForDateColumn() {
         String ddl = "CREATE TABLE data(id INT, nullable_date date default 0, not_nullable_date date not null default 0, PRIMARY KEY (id))";
@@ -50,7 +56,7 @@ public class MysqlAntlrDefaultValueTest extends AbstractMysqlDefaultValueTest {
         return Date.from(LocalDate.of(1970, 1, 1).atStartOfDay(ZoneId.of("UTC")).toInstant());
     }
 
-    @Test
+    @Test(groups = {"defaultValue"})
     @FixFor("DBZ-1204")
     public void shouldAcceptBooleanAsDefaultValue() {
         String ddl = "CREATE TABLE data(id INT, "
@@ -72,7 +78,7 @@ public class MysqlAntlrDefaultValueTest extends AbstractMysqlDefaultValueTest {
         assertThat((Short) table.columnWithName("tival4").defaultValue()).isEqualTo((short) 18);
     }
 
-    @Test
+    @Test(groups = {"defaultValue"})
     @FixFor("DBZ-1249")
     public void shouldAcceptBitSetDefaultValue() {
         String ddl = "CREATE TABLE user_subscribe (id bigint(20) unsigned NOT NULL AUTO_INCREMENT, content bit(24) DEFAULT b'111111111111101100001110', PRIMARY KEY (id)) ENGINE=InnoDB";
@@ -85,5 +91,85 @@ public class MysqlAntlrDefaultValueTest extends AbstractMysqlDefaultValueTest {
         assertThat(Byte.toUnsignedInt((defVal[0]))).isEqualTo(0b00001110);
         assertThat(Byte.toUnsignedInt((defVal[1]))).isEqualTo(0b11111011);
         assertThat(Byte.toUnsignedInt((defVal[2]))).isEqualTo(0b11111111);
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseUnsignedTinyintDefaultValue() {
+    	super.parseUnsignedTinyintDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseUnsignedSmallintDefaultValue() {
+        super.parseUnsignedSmallintDefaultValue();	
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseUnsignedMediumintDefaultValue() {
+    	super.parseUnsignedMediumintDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseUnsignedIntDefaultValue() {
+    	super.parseUnsignedIntDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseUnsignedBigIntDefaultValueToLong() {
+    	super.parseUnsignedBigIntDefaultValueToLong();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseUnsignedBigIntDefaultValueToBigDecimal() {
+    	super.parseUnsignedBigIntDefaultValueToBigDecimal();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseStringDefaultValue() {
+    	super.parseStringDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseBitDefaultValue() {
+    	super.parseBitDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseBooleanDefaultValue() {
+    	super.parseBooleanDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseNumberDefaultValue() {
+    	super.parseNumberDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseRealDefaultValue() {
+    	super.parseRealDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseNumericAndDecimalToDoubleDefaultValue() {
+    	super.parseNumericAndDecimalToDoubleDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseNumericAndDecimalToDecimalDefaultValue() {
+    	super.parseNumericAndDecimalToDecimalDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseTimeDefaultValue() {
+    	super.parseTimeDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseDateDefaultValue() {
+    	super.parseDateDefaultValue();
+    }
+    
+    @Test(groups = {"defaultValue"})
+    public void parseAlterTableTruncatedDefaulDateTime() {
+    	super.parseAlterTableTruncatedDefaulDateTime();
     }
 }

@@ -83,6 +83,7 @@ public class BinlogReaderIT {
         if (reader != null) {
             try {
                 reader.stop();
+                DATABASE.dropDB();
             } finally {
                 if (context != null) {
                     try {
@@ -90,7 +91,6 @@ public class BinlogReaderIT {
                     } finally {
                         context = null;
                         Testing.Files.delete(DB_HISTORY_PATH);
-                        DATABASE.dropDB();
                     }
                 }
             }
@@ -477,7 +477,7 @@ public class BinlogReaderIT {
         reader.start();
     }
 
-    @Test(groups = {"totest"})
+    @Test(groups = {"reader"})
     @FixFor( "DBZ-1208" )
     public void shouldAcceptTls12() {
         final UniqueDatabase REGRESSION_DATABASE = new UniqueDatabase("logical_server_name", "regression_test")

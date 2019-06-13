@@ -12,6 +12,9 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.Assert;
 import static org.fest.assertions.Assertions.assertThat;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -29,6 +32,7 @@ import io.debezium.data.KeyValueStore.Collection;
 import io.debezium.data.SchemaChangeHistory;
 import io.debezium.data.VerifyRecord;
 import io.debezium.heartbeat.Heartbeat;
+import io.debezium.jdbc.JdbcConnection;
 import io.debezium.util.Testing;
 
 /**
@@ -47,15 +51,25 @@ public class SnapshotReaderIT {
     private SnapshotReader reader;
     private CountDownLatch completed;
 
-    @BeforeMethod
-	public void beforeEach() {
+    @BeforeMethod(groups= {"test", "snap"})
+	public void beforeEach() throws SQLException, InterruptedException {
         Testing.Files.delete(DB_HISTORY_PATH);
+        DATABASE.setConnInfo("jdbc");
+        try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
+            try (JdbcConnection connection = db.connect()) {
+                final Connection jdbc = connection.connection();
+               
+                final Statement statement = jdbc.createStatement();
+                statement.executeUpdate("reset master");  
+            }
+        }
+        OTHER_DATABASE.setConnInfo("jdbc");
         DATABASE.createAndInitialize();
         OTHER_DATABASE.createAndInitialize();
         completed = new CountDownLatch(1);
     }
 
-    @AfterMethod
+    @AfterMethod(groups= {"test", "snap"})
 	public void afterEach() {
         if (reader != null) {
             try {
@@ -64,6 +78,8 @@ public class SnapshotReaderIT {
                 reader = null;
             }
         }
+        DATABASE.dropDB();
+        OTHER_DATABASE.dropDB();
         if (context != null) {
             try {
                 context.shutdown();
@@ -76,6 +92,10 @@ public class SnapshotReaderIT {
 
     protected Configuration.Builder simpleConfig() {
         return DATABASE.defaultConfig()
+        		.with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", DATABASE.getConnInfo().get("hostname").toString()))
+                .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", DATABASE.getConnInfo().get("port").toString()))
+                .with(MySqlConnectorConfig.USER, DATABASE.getConnInfo().get("user").toString())
+                .with(MySqlConnectorConfig.PASSWORD, DATABASE.getConnInfo().get("password").toString())
                 .with(MySqlConnectorConfig.INCLUDE_SCHEMA_CHANGES, false)
                 .with(MySqlConnectorConfig.SNAPSHOT_LOCKING_MODE, MySqlConnectorConfig.SnapshotLockingMode.MINIMAL)
                 // Explicitly enable INCLUDE_SQL_QUERY connector option. For snapshots it should have no effect as
@@ -83,7 +103,7 @@ public class SnapshotReaderIT {
                 .with(MySqlConnectorConfig.INCLUDE_SQL_QUERY, true);
     }
 
-    @Test
+    @Test(groups= {"snap"})
     public void shouldCreateSnapshotOfSingleDatabase() throws Exception {
         config = simpleConfig()
                 .build();
@@ -166,7 +186,7 @@ public class SnapshotReaderIT {
             timerecords.add(((Struct) val.value()).getStruct("after"));
         });
         Struct after = timerecords.get(0);
-        assertThat(after.get("c1")).isEqualTo(toMicroSeconds("PT517H51M04.78S"));
+        assertThat(after.get("c1")).isEqualTo(toMicroSeconds("PT517H51M04.77S"));
         assertThat(after.get("c2")).isEqualTo(toMicroSeconds("-PT13H14M50S"));
         assertThat(after.get("c3")).isEqualTo(toMicroSeconds("-PT733H0M0.001S"));
         assertThat(after.get("c4")).isEqualTo(toMicroSeconds("-PT1H59M59.001S"));
@@ -181,7 +201,7 @@ public class SnapshotReaderIT {
         }
     }
 
-    @Test
+    @Test(groups= {"snap"})
     public void shouldCreateSnapshotOfSingleDatabaseUsingReadEvents() throws Exception {
         config = simpleConfig().with(MySqlConnectorConfig.DATABASE_WHITELIST, "connector_(.*)_" + DATABASE.getIdentifier()).build();
         context = new MySqlTaskContext(config, new Filters.Builder(config).build());
@@ -266,7 +286,7 @@ public class SnapshotReaderIT {
             timerecords.add(((Struct) val.value()).getStruct("after"));
         });
         Struct after = timerecords.get(0);
-        assertThat(after.get("c1")).isEqualTo(toMicroSeconds("PT517H51M04.78S"));
+        assertThat(after.get("c1")).isEqualTo(toMicroSeconds("PT517H51M04.77S"));
         assertThat(after.get("c2")).isEqualTo(toMicroSeconds("-PT13H14M50S"));
         assertThat(after.get("c3")).isEqualTo(toMicroSeconds("-PT733H0M0.001S"));
         assertThat(after.get("c4")).isEqualTo(toMicroSeconds("-PT1H59M59.001S"));
@@ -285,7 +305,7 @@ public class SnapshotReaderIT {
         return context.isTableIdCaseInsensitive() ? "products" : "Products";
     }
 
-    @Test
+    @Test(groups= {"snap"})
     public void shouldCreateSnapshotOfSingleDatabaseWithSchemaChanges() throws Exception {
         config = simpleConfig().with(MySqlConnectorConfig.INCLUDE_SCHEMA_CHANGES, true).build();
         context = new MySqlTaskContext(config, new Filters.Builder(config).build());
@@ -369,7 +389,7 @@ public class SnapshotReaderIT {
             timerecords.add(((Struct) val.value()).getStruct("after"));
         });
         Struct after = timerecords.get(0);
-        assertThat(after.get("c1")).isEqualTo(toMicroSeconds("PT517H51M04.78S"));
+        assertThat(after.get("c1")).isEqualTo(toMicroSeconds("PT517H51M04.77S"));
         assertThat(after.get("c2")).isEqualTo(toMicroSeconds("-PT13H14M50S"));
         assertThat(after.get("c3")).isEqualTo(toMicroSeconds("-PT733H0M0.001S"));
         assertThat(after.get("c4")).isEqualTo(toMicroSeconds("-PT1H59M59.001S"));
@@ -384,7 +404,7 @@ public class SnapshotReaderIT {
         }
     }
 
-    @Test(expectedExceptions = ConnectException.class)
+    @Test(expectedExceptions = ConnectException.class, groups = {"snap"})
     public void shouldCreateSnapshotSchemaOnlyRecovery_exception() throws Exception {
         config = simpleConfig().with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.SCHEMA_ONLY_RECOVERY).build();
         context = new MySqlTaskContext(config, new Filters.Builder(config).build());
@@ -413,7 +433,7 @@ public class SnapshotReaderIT {
         // should fail because we have no existing binlog information
     }
 
-    @Test
+    @Test(groups= {"snap"})
     public void shouldCreateSnapshotSchemaOnlyRecovery() throws Exception {
         config = simpleConfig().with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.SCHEMA_ONLY_RECOVERY).build();
         context = new MySqlTaskContext(config, new Filters.Builder(config).build());
@@ -457,7 +477,7 @@ public class SnapshotReaderIT {
         }
     }
 
-    @Test
+    @Test(groups= {"snap"})
     public void shouldSnapshotTablesInOrderSpecifiedInTablesWhitelist() throws Exception{
         config = simpleConfig()
                 .with(MySqlConnectorConfig.TABLE_WHITELIST, "connector_test_ro_(.*).orders,connector_test_ro_(.*).Products,connector_test_ro_(.*).products_on_hand,connector_test_ro_(.*).dbz_342_timetest")
@@ -484,7 +504,7 @@ public class SnapshotReaderIT {
         assertArrayEquals(tablesInOrder.toArray(), tablesInOrderExpected.toArray());
     }
 
-    @Test
+    @Test(groups= {"snap"})
     public void shouldSnapshotTablesInLexicographicalOrder() throws Exception{
         config = simpleConfig()
                 .build();
@@ -521,7 +541,7 @@ public class SnapshotReaderIT {
         return tablesInOrderExpected;
     }
 
-    @Test
+    @Test(groups= {"snap"})
     public void shouldCreateSnapshotSchemaOnly() throws Exception {
         config = simpleConfig()
                     .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.SCHEMA_ONLY)

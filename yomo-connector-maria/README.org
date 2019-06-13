@@ -1,13 +1,7 @@
 * Unit test
     | test case                                  | result             | success/all | comment                                |
     |--------------------------------------------+--------------------+-------------+----------------------------------------|
-    | AbstractMysqlDefaultValueTest.java         | X                  |             |                                        |
-    | MysqlAntlrDefaultValueTest.java            | 19/1               |             |                                        |
-    | BinlogReaderIT.java                        | 9/10               |             | Waiting the TLS setting in the maria   |
-    | MySqlGeometryIT.java                       | X                  |             | To do. It's a different domain         |
     | ParallelSnapshotReaderTest.java            | 9/6                |             |                                        |
-    | ReadBinLogIT.java                          | To fix             |             |                                        |
-    | SnapshotReaderIT.java                      | X                  |             |                                        |
     | SourceInfoTest.java                        | 38/2               |             | Whether it's need to test for GTID set |
     | ZZZGtidSetIT.java                          | X                  |             | To fix                                 |
     |--------------------------------------------+--------------------+-------------+----------------------------------------|
@@ -31,6 +25,8 @@
     | MySqlTableMaintenanceStatementsIT.java     | O                  | 1/1         |                                        |
     | MySqlValueConvertersTest.java              | O                  | 4/4         | Removed JSON test                      |
     | TopicNameSanitizationIT.java               | O                  |             |                                        |
+    | BinlogReaderIT.java                        | O                  | 10/10       |                                        |
+    | MySqlGeometryIT.java                       | O                  | 2/2         |                                        |
     |--------------------------------------------+--------------------+-------------+----------------------------------------|
     | ChainedReaderTest.java                     | O                  |             |                                        |
     | FiltersTest.java                           | O                  |             |                                        |
@@ -40,12 +36,15 @@
     | MySqlUnsignedIntegerConverterTest.java     | O                  |             |                                        |
     | MySqlGeometryTest.java                     | O                  |             |                                        |
     | ReconcilingBinlogReaderTest.java           | O                  |             |                                        |
+    | MysqlDefaultValueTest.java                 | O                  | 16/16       | ->AbstractMysqlDefaultValueTest.java   |
+    | MysqlAntlrDefaultValueTest.java            | O                  | 19/19       | ->AbstractMysqlDefaultValueTest.java   |
+    | ReadBinLogIT.java                          | O                  | 6/6         |                                        |
+    | SnapshotReaderIT.java                      | O                  | 8/8         |                                        |
     |--------------------------------------------+--------------------+-------------+----------------------------------------|
     | AbstractMySqlConnectorOutputTest.java.2fix | -                  |             |                                        |
     | MySqlTaskContextIT.java.2fix               | -                  |             |                                        |
     | MySqlTaskContextTest.java.2fix             | -                  |             |                                        |
     |--------------------------------------------+--------------------+-------------+----------------------------------------|
-    | MysqlDefaultValueTest.java                 | Not test           |             |                                        |
     | MySqlConnectorJsonIT.java                  | Not test           |             | No need to test json                   |
     | DatabaseDifferences.java                   | Not test           |             | Interface                              |
     | junit/SkipForLegacyParser.java             | Not test           |             | Interface                              |
@@ -54,6 +53,7 @@
     | UniqueDatabase.java                        | Not test           |             |                                        |
     | TableConvertersTest.java                   | junit=> to convert |             | Not yet implemented                    |
     | Configurator.java                          | Not test           |             |                                        |
+    | AbstractMysqlDefaultValueTest.java         | Not test           |             |                                        |
 
 
 ** TODO AbstractMysqlDefaultValueTest.java
@@ -94,6 +94,115 @@ digits rather than 6.
 and "Commit requested but TX was not started before". To resolve the warning message, add the [consumeEvent(event);]
 to the else in the mysql-binlog-connector-java->EventBuffer->Add. Mariadb's QUERY event only contain those DDL, commit
 and ROLLBACK. Thos queries (insert/delte/update) are in the (WRITE_ROWS/UPDATE_ROWS/DELETE_ROWS).
+*** shouldAcceptTls12
+**** Set the ssl for mariadb
+  - Create the CA certificate
+    #+BEGIN_SRC
+$cd yomo-connector/yomo-connector-maria/src/test/resources/ssl
+$openssl genrsa 2048 > ca-key.pem
+
+$ openssl req -new -x509 -nodes -days 365000 -key ca-key.pem -out ca-cert.pem
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [XX]:JP
+State or Province Name (full name) []:Tokyo
+Locality Name (eg, city) [Default City]:Tokyo
+Organization Name (eg, company) [Default Company Ltd]:None
+Organizational Unit Name (eg, section) []:Data
+Common Name (eg, your name or your server's hostname) []:mdbNode01
+Email Address []:mdbNode01@gmail.com
+    #+END_SRC
+  - Create the server certificate
+    #+BEGIN_SRC
+$ openssl req -newkey rsa:2048 -days 365000 -nodes -keyout server-key.pem -out server-req.pem
+Generating a 2048 bit RSA private key
+...............................+++
+.....+++
+writing new private key to 'server-key.pem'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [XX]:JP
+State or Province Name (full name) []:Tokyo
+Locality Name (eg, city) [Default City]:Tokyo
+Organization Name (eg, company) [Default Company Ltd]:None
+Organizational Unit Name (eg, section) []:Data]
+Common Name (eg, your name or your server's hostname) []:mdbNode01
+Email Address []:mdbNode01@sbibits.com
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:
+$ openssl rsa -in server-key.pem -out server-key.pem
+writing RSA key
+$ls
+ca-cert.pem  ca-key.pem  server-key.pem  server-req.pem
+$ openssl x509 -req -in server-req.pem -days 365000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 -out server-cert.p
+em
+Signature ok
+subject=/C=JP/ST=Tokyo/L=Tokyo/O=None/OU=Data/CN=mdbNode01/emailAddress=mdbNode01@gmail.com
+Getting CA Private Key
+$ ls
+ca-cert.pem  ca-key.pem  server-cert.pem  server-key.pem  server-req.pem
+    #+END_SRC
+  - Create the client certificate
+    #+BEGIN_SRC
+$ openssl req -newkey rsa:2048 -days 365000 -nodes -keyout client-key.pem -out client-req.pem
+Generating a 2048 bit RSA private key
+........................................................................................+++
+.....................................+++
+writing new private key to 'client-key.pem'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [XX]:JP
+State or Province Name (full name) []:Tokyo
+Locality Name (eg, city) [Default City]:Tokyo
+Organization Name (eg, company) [Default Company Ltd]:None
+Organizational Unit Name (eg, section) []:Data
+Common Name (eg, your name or your server's hostname) []:mdbNode01
+Email Address []:mdbNode01@gmail.com
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:
+$ openssl rsa -in client-key.pem -out client-key.pem
+writing RSA key
+
+
+$ openssl x509 -req -in client-req.pem -days 365000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 -out client-cert.p
+em
+Signature ok
+subject=/C=JP/ST=Tokyo/L=Tokyo/O=None/OU=Data/CN=mdbNode01/emailAddress=mdbNode01@gmail.com
+Getting CA Private Key
+    #+END_SRC
+  - Verify the certificates
+    #+BEGIN_SRC
+$ openssl verify -CAfile ca-cert.pem server-cert.pem client-cert.pem
+server-cert.pem: C = JP, ST = Tokyo, L = Tokyo, O = BITS, OU = Data Consulting, CN = mdbNode01, emailAddress = mdbNode01@sbibits.com
+error 18 at 0 depth lookup:self signed certificate
+OK
+client-cert.pem: OK
+    #+END_SRC
+
+
 ** MySqlDateTimeInKey
   - The event is as below
     | Seq | EventType     |       GTID | Query           | SNAPSHORT | Addition                 | num |
@@ -118,3 +227,21 @@ CREATE TABLE GENERATED_TABLE (
 #+END_SRC
 *** columnTypeAndDefaultValueChange
   binlog_rows_query_log_events does not support on the mariadb
+** ReadBinLogIT
+  - Add wait into recordedEventData
+    The CDC is async process. So there is lapse from data inserted into db to be caught in the CDC. In the test, \\
+sometimes could not find the rows because of this lapse. What I did is to add wait logical util finding the row \\
+match the expectation. Of course, adding the timeout if there is really no data in the CDC.
+  - Event sequence
+    The event sequence is different from the mysql. Two insert query within one transaction will generate below events.
+      | Seq | Event      | Comment |
+      |-----+------------+---------|
+      |   1 | MARIA_GTID | Begin   |
+      |   2 | TABLE_MAP  |         |
+      |   3 | WRITE_ROW  |         |
+      |   4 | TABLE_MAP  |         |
+      |   5 | WRITE_ROW  |         |
+      |   6 | XID        | Commit  |
+      |-----+------------+---------|
+  - Disable shouldFailToConnectToInvalidBinlogFile
+    In the maria version, I only use GTID as the replication. The binlog file and position are only used for reference.

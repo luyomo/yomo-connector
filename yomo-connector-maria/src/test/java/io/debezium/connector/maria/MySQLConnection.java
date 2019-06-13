@@ -21,7 +21,7 @@ import io.debezium.jdbc.JdbcConnection;
 public class MySQLConnection extends JdbcConnection {
 
     public enum MySqlVersion {
-        MYSQL_5, MYSQL_8;
+        MARIA_10, MARIA_OTHER;
     }
 
     private DatabaseDifferences databaseAsserts;
@@ -100,7 +100,7 @@ public class MySQLConnection extends JdbcConnection {
                     return rs.getString(2);
                 });
 
-                mySqlVersion = versionString.startsWith("8.") ? MySqlVersion.MYSQL_8 : MySqlVersion.MYSQL_5;
+                mySqlVersion = versionString.startsWith("10.") ? MySqlVersion.MARIA_10 : MySqlVersion.MARIA_OTHER;
             }
             catch (SQLException e) {
                 throw new IllegalStateException("Couldn't obtain MySQL Server version", e);
@@ -112,7 +112,7 @@ public class MySQLConnection extends JdbcConnection {
 
     public DatabaseDifferences databaseAsserts() {
         if (databaseAsserts == null) {
-            if (getMySqlVersion() == MySqlVersion.MYSQL_8) {
+            if (getMySqlVersion() == MySqlVersion.MARIA_10) {
                 databaseAsserts = new DatabaseDifferences() {
                     @Override
                     public boolean isCurrentDateTimeDefaultGenerated() {

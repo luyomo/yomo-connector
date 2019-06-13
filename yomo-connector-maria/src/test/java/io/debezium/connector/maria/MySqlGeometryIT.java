@@ -12,7 +12,12 @@ import org.testng.AssertJUnit;
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.ResourceBundle;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -22,6 +27,7 @@ import io.debezium.config.Configuration;
 import io.debezium.connector.maria.MySQLConnection.MySqlVersion;
 import io.debezium.data.Envelope;
 import io.debezium.embedded.AbstractConnectorTest;
+import io.debezium.jdbc.JdbcConnection;
 import io.debezium.util.Testing;
 import mil.nga.wkb.geom.Point;
 import mil.nga.wkb.io.ByteReader;
@@ -39,32 +45,46 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
 
     private Configuration config;
 
-    @BeforeMethod
-	public void beforeEach() {
+    @BeforeMethod(groups = {"test", "column"})
+	public void beforeEach() throws SQLException, InterruptedException{
         stopConnector();
-        databaseDifferences = databaseGeoDifferences(MySQLConnection.forTestDatabase("emptydb").getMySqlVersion());
+        databaseDifferences = databaseGeoDifferences(MySQLConnection.forTestDatabase("mysql", getConnInfo()).getMySqlVersion());
 
         DATABASE = new UniqueDatabase("geometryit", databaseDifferences.geometryDatabaseName())
                 .withDbHistoryPath(DB_HISTORY_PATH);
+        DATABASE.setConnInfo("jdbc");
+        try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
+            try (JdbcConnection connection = db.connect()) {
+                final Connection jdbc = connection.connection();
+               
+                final Statement statement = jdbc.createStatement();
+                statement.executeUpdate("reset master");  
+            }
+        }
         DATABASE.createAndInitialize();
 
         initializeConnectorTestFramework();
         Testing.Files.delete(DB_HISTORY_PATH);
     }
 
-    @AfterMethod
+    @AfterMethod(groups = {"test", "column"})
 	public void afterEach() {
         try {
             stopConnector();
+            DATABASE.dropDB();
         } finally {
             Testing.Files.delete(DB_HISTORY_PATH);
         }
     }
 
-    @Test
+    @Test(groups = {"test"})
     public void shouldConsumeAllEventsFromDatabaseUsingBinlogAndNoSnapshot() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
         config = DATABASE.defaultConfig()
+        		.with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.replica.hostname", DATABASE.getConnInfo().get("hostname").toString()))
+                .with(MySqlConnectorConfig.PORT, System.getProperty("database.replica.port", DATABASE.getConnInfo().get("port").toString()))
+                .with(MySqlConnectorConfig.USER, DATABASE.getConnInfo().get("user").toString())
+                .with(MySqlConnectorConfig.PASSWORD, DATABASE.getConnInfo().get("password").toString())
                 .with(MySqlConnectorConfig.SNAPSHOT_MODE, MySqlConnectorConfig.SnapshotMode.NEVER)
                 .build();
 
@@ -106,7 +126,7 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
         });
     }
 
-    @Test
+    @Test(groups = {"test"})
     public void shouldConsumeAllEventsFromDatabaseUsingSnapshot() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
         config = DATABASE.defaultConfig().build();
@@ -149,6 +169,19 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
                 assertGeomRecord(value);
             }
         });
+    }
+    
+    private HashMap<String, Object> getConnInfo() {
+    	ResourceBundle bundle = ResourceBundle.getBundle("jdbc");
+    	String prefix = "jdbc.mysql.replication.";
+    	Map<String, Object> dbConnInfo = new HashMap<String, Object>();
+
+    	if (bundle.getString(prefix + "database.hostname"     ) != null) dbConnInfo.put("hostname", bundle.getString(prefix + "database.hostname"));
+    	if (bundle.getString(prefix + "database.port"         ) != null) dbConnInfo.put("port"    , bundle.getString(prefix + "database.port"));
+    	if (bundle.getString(prefix + "database.superUsername") != null) dbConnInfo.put("user"    , bundle.getString(prefix + "database.superUsername"));
+    	if (bundle.getString(prefix + "database.superPassword") != null) dbConnInfo.put("password", bundle.getString(prefix + "database.superPassword"));
+    	
+    	return (HashMap<String, Object>) dbConnInfo;
     }
 
     private void assertPoint(Struct value) {
@@ -206,12 +239,12 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
     }
 
     private DatabaseGeoDifferences databaseGeoDifferences(MySqlVersion mySqlVersion) {
-        if (mySqlVersion == MySqlVersion.MYSQL_5) {
+        if (mySqlVersion == MySqlVersion.MARIA_10) {
             return new DatabaseGeoDifferences() {
 
                 @Override
                 public String geometryDatabaseName() {
-                    return "geometry_test_5";
+                    return "geometry_test_10";
                 }
 
                 @Override
@@ -232,7 +265,7 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
 
                 @Override
                 public String geometryDatabaseName() {
-                    return "geometry_test_8";
+                    return "geometry_test_other";
                 }
 
                 /**
@@ -261,4 +294,5 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
         int geometryPointTableRecords();
         void geometryAssertPoints(Double expectedX, Double expectedY, Double actualX, Double actualY);
     }
+    
 }

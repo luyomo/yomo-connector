@@ -11,7 +11,9 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.Assert;
 import java.io.IOException;
 import java.io.Serializable;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -45,9 +47,12 @@ import com.github.yomo.maria.binlog.event.deserialization.EventDeserializer;
 import com.github.yomo.maria.binlog.network.SSLMode;
 import com.github.yomo.maria.binlog.network.ServerException;
 
+import com.github.yomo.maria.binlog.event.*;
+
 import static org.fest.assertions.Assertions.assertThat;
 
 import io.debezium.jdbc.JdbcConfiguration;
+import io.debezium.jdbc.JdbcConnection;
 import io.debezium.util.Testing;
 
 public class ReadBinLogIT implements Testing {
@@ -69,26 +74,37 @@ public class ReadBinLogIT implements Testing {
 
     private final UniqueDatabase DATABASE = new UniqueDatabase("readbinlog_it", "readbinlog_test");
 
-    @BeforeMethod
+    @BeforeMethod(groups = {"test", "readBinlog"})
 	public void beforeEach() throws TimeoutException, IOException, SQLException, InterruptedException {
         events.clear();
 
         // Connect the normal SQL client ...
         DATABASE.createAndInitialize();
-        conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName());
+        DATABASE.setConnInfo("jdbc");
+        try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
+            try (JdbcConnection connection = db.connect()) {
+                final Connection jdbc = connection.connection();
+               
+                final Statement statement = jdbc.createStatement();
+                statement.executeUpdate("reset master");  
+            }
+        }
+        
+        conn = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());
         conn.connect();
 
         // Get the configuration that we used ...
         config = conn.config();
     }
 
-    @AfterMethod
+    @AfterMethod(groups = {"test", "readBinlog"})
 	public void afterEach() throws IOException, SQLException {
         events.clear();
         try {
             if (client != null) {
                 client.disconnect();
             }
+            DATABASE.dropDB();
         } finally {
             client = null;
             try {
@@ -108,7 +124,7 @@ public class ReadBinLogIT implements Testing {
     protected void startClient(Consumer<BinaryLogClient> preConnect) throws IOException, TimeoutException, SQLException {
         // Connect the bin log client ...
         counters = new EventQueue(DEFAULT_TIMEOUT, this::logConsumedEvent, this::logIgnoredEvent);
-        client = new BinaryLogClient(config.getHostname(), config.getPort(), "replicator", "replpass");
+        client = new BinaryLogClient(config.getHostname(), config.getPort(), config.getUser(), config.getPassword());
         client.setServerId(client.getServerId() - 1); // avoid clashes between BinaryLogClient instances
         client.setKeepAlive(false);
         client.setSSLMode(SSLMode.DISABLED);
@@ -136,8 +152,7 @@ public class ReadBinLogIT implements Testing {
         counters.reset();
     }
     
-    @Test(enabled = false)
-	@Test( expected = ServerException.class)
+	@Test(expectedExceptions = Exception.class, enabled = false, groups = {"readBinlog"})
     public void shouldFailToConnectToInvalidBinlogFile() throws Exception {
         Testing.Print.enable();
         startClient(client -> {
@@ -146,8 +161,7 @@ public class ReadBinLogIT implements Testing {
     }
 
 
-    @Test(enabled = false)
-	@Test
+    @Test(enabled = true, groups = {"readBinlog"})
     public void shouldReadMultipleBinlogFiles() throws Exception {
         Testing.Print.enable();
         startClient(client -> {
@@ -156,12 +170,12 @@ public class ReadBinLogIT implements Testing {
         counters.consumeAll(20, TimeUnit.SECONDS);
     }
 
-    @Test
+    @Test(groups = {"readBinlog"})
     public void shouldCaptureSingleWriteUpdateDeleteEvents() throws Exception {
         startClient();
         //Testing.Print.enable();
         // write/insert
-        conn.execute("INSERT INTO person(name,age) VALUES ('Georgia',30)");
+        conn.execute("INSERT INTO person(name,age) VALUES ('Georgia',30)","commit");
         counters.consume(1, WriteRowsEventData.class);
         List<WriteRowsEventData> writeRowEvents = recordedEventData(WriteRowsEventData.class, 1);
         assertRows(writeRowEvents.get(0), rows().insertedRow("Georgia", 30, any(), any()));
@@ -180,15 +194,20 @@ public class ReadBinLogIT implements Testing {
         assertRows(deleteRowEvents.get(0), rows().removedRow("Maggie", 30, any(), any()));
     }
 
-    @Test
+    @Test(groups = {"readBinlog"})
     public void shouldCaptureMultipleWriteUpdateDeleteEvents() throws Exception {
         startClient();
         // write/insert as a single transaction
+        conn.setAutoCommit(false);
         conn.execute("INSERT INTO person(name,age) VALUES ('Georgia',30)",
-                     "INSERT INTO person(name,age) VALUES ('Janice',19)");
-        counters.consume(1, QueryEventData.class); // BEGIN
-        counters.consume(1, TableMapEventData.class);
-        counters.consume(2, WriteRowsEventData.class);
+                     "INSERT INTO person(name,age) VALUES ('Janice',19)",
+                     "commit");
+        
+        counters.consume(1, TableMapEventData.class);      //TABLE_MAP  -> Georgia
+        counters.consume(1, WriteRowsEventData.class);     //WRITE_ROW  -> Georgia
+        counters.consume(1, TableMapEventData.class);      //TABLE_MAP  -> Janice
+        counters.consume(1, WriteRowsEventData.class);     //WRITE_ROW  -> Janice
+        
         counters.consume(1, XidEventData.class); // COMMIT
         List<WriteRowsEventData> writeRowEvents = recordedEventData(WriteRowsEventData.class, 2);
         assertRows(writeRowEvents.get(0), rows().insertedRow("Georgia", 30, any(), any()));
@@ -197,10 +216,13 @@ public class ReadBinLogIT implements Testing {
 
         // update as a single transaction
         conn.execute("UPDATE person SET name = 'Maggie' WHERE name = 'Georgia'",
-                     "UPDATE person SET name = 'Jamie' WHERE name = 'Janice'");
-        counters.consume(1, QueryEventData.class); // BEGIN
+                     "UPDATE person SET name = 'Jamie' WHERE name = 'Janice'",
+                     "commit");
+        //counters.consume(1, QueryEventData.class); // BEGIN
         counters.consume(1, TableMapEventData.class);
-        counters.consume(2, UpdateRowsEventData.class);
+        counters.consume(1, UpdateRowsEventData.class);
+        counters.consume(1, TableMapEventData.class);
+        counters.consume(1, UpdateRowsEventData.class);
         counters.consume(1, XidEventData.class); // COMMIT
         List<UpdateRowsEventData> updateRowEvents = recordedEventData(UpdateRowsEventData.class, 2);
         assertRows(updateRowEvents.get(0), rows().changeRow("Georgia", 30, any(), any()).to("Maggie", 30, any(), any()));
@@ -209,22 +231,26 @@ public class ReadBinLogIT implements Testing {
 
         // delete as a single transaction
         conn.execute("DELETE FROM person WHERE name = 'Maggie'",
-                     "DELETE FROM person WHERE name = 'Jamie'");
-        counters.consume(1, QueryEventData.class); // BEGIN
+                     "DELETE FROM person WHERE name = 'Jamie'",
+                     "commit");
+        conn.setAutoCommit(true);
+        //counters.consume(1, QueryEventData.class); // BEGIN
         counters.consume(1, TableMapEventData.class);
-        counters.consume(2, DeleteRowsEventData.class);
+        counters.consume(1, DeleteRowsEventData.class);
+        counters.consume(1, TableMapEventData.class);
+        counters.consume(1, DeleteRowsEventData.class);
         counters.consume(1, XidEventData.class); // COMMIT
         List<DeleteRowsEventData> deleteRowEvents = recordedEventData(DeleteRowsEventData.class, 2);
         assertRows(deleteRowEvents.get(0), rows().removedRow("Maggie", 30, any(), any()));
         assertRows(deleteRowEvents.get(1), rows().removedRow("Jamie", 19, any(), any()));
     }
 
-    @Test
+    @Test(groups = {"readBinlog"})
     public void shouldCaptureMultipleWriteUpdateDeletesInSingleEvents() throws Exception {
         startClient();
         // write/insert as a single statement/transaction
         conn.execute("INSERT INTO person(name,age) VALUES ('Georgia',30),('Janice',19)");
-        counters.consume(1, QueryEventData.class); // BEGIN
+        //counters.consume(1, QueryEventData.class); // BEGIN
         counters.consume(1, TableMapEventData.class);
         counters.consume(1, WriteRowsEventData.class);
         counters.consume(1, XidEventData.class); // COMMIT
@@ -239,7 +265,7 @@ public class ReadBinLogIT implements Testing {
                 "                          WHEN name = 'Janice' THEN 'Jamie' " +
                 "                         END " +
                 "WHERE name IN ('Georgia','Janice')");
-        counters.consume(1, QueryEventData.class); // BEGIN
+        //counters.consume(1, QueryEventData.class); // BEGIN
         counters.consume(1, TableMapEventData.class);
         counters.consume(1, UpdateRowsEventData.class);
         counters.consume(1, XidEventData.class); // COMMIT
@@ -250,7 +276,7 @@ public class ReadBinLogIT implements Testing {
 
         // delete as a single statement/transaction
         conn.execute("DELETE FROM person WHERE name IN ('Maggie','Jamie')");
-        counters.consume(1, QueryEventData.class); // BEGIN
+        //counters.consume(1, QueryEventData.class); // BEGIN
         counters.consume(1, TableMapEventData.class);
         counters.consume(1, DeleteRowsEventData.class);
         counters.consume(1, XidEventData.class); // COMMIT
@@ -265,8 +291,7 @@ public class ReadBinLogIT implements Testing {
      * 
      * @throws Exception if there are problems
      */
-    @Test(enabled = false)
-	@Test
+    @Test(enabled=true, groups = {"readBinlog"})
     public void shouldCaptureQueryEventData() throws Exception {
         // Testing.Print.enable();
         startClient(client -> {
@@ -280,11 +305,10 @@ public class ReadBinLogIT implements Testing {
             if (sql.equalsIgnoreCase("BEGIN") || sql.equalsIgnoreCase("COMMIT")) {
                 return;
             }
-            System.out.println(event.getSql());
         });
     }
 
-    @Test
+    @Test(groups = {"readBinlog"})
     public void shouldQueryInformationSchema() throws Exception {
         // long tableId = writeRows.getTableId();
         // BitSet columnIds = writeRows.getIncludedColumns();
@@ -317,9 +341,23 @@ public class ReadBinLogIT implements Testing {
 
     protected <T extends EventData> List<T> recordedEventData(Class<T> eventType, int expectedCount) {
         List<T> results = null;
-        synchronized (events) {
-            results = events.stream().map(Event::getData).filter(eventType::isInstance).map(eventType::cast).collect(Collectors.toList());
+        // Add loop here because the event CDC is async which may be lapsed to this logic.  EventQueue->onEvent
+        int __count = 0;
+        while(__count < 5) {
+            synchronized (events) {
+                results = events.stream().map(Event::getData).filter(eventType::isInstance).map(eventType::cast).collect(Collectors.toList());
+            }
+            __count++;
+            if(results.size() >= expectedCount) break;
+            
+            try {
+				TimeUnit.SECONDS.sleep(1);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         }
+        
         if (expectedCount > -1) {
             assertThat(results.size()).isEqualTo(expectedCount);
         }
@@ -553,7 +591,7 @@ public class ReadBinLogIT implements Testing {
                 Event nextEvent = queue.poll();
                 if (nextEvent != null) {
                     if (condition.test(nextEvent)) {
-                        --eventsRemaining;
+                    	--eventsRemaining;
                         consumedEvents.accept(nextEvent);
                     } else {
                         ignoredEvents.accept(nextEvent);
@@ -561,7 +599,7 @@ public class ReadBinLogIT implements Testing {
                 }
             }
             if (eventsRemaining > 0) {
-                throw new TimeoutException(
+            	throw new TimeoutException(
                         "Received " + (eventCount - eventsRemaining) + " of " + eventCount + " in " + timeoutInMillis + "ms");
             }
         }
@@ -618,7 +656,7 @@ public class ReadBinLogIT implements Testing {
          */
         public void consume(int eventCount, Class<? extends EventData> eventDataClass, long timeoutMillis) throws TimeoutException {
             consume(eventCount, defaultTimeoutInMillis, event -> {
-                EventData data = event.getData();
+            	EventData data = event.getData();
                 return data != null && data.getClass().equals(eventDataClass);
             });
         }
