@@ -77,7 +77,7 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
         }
     }
 
-    @Test(groups = {"test"})
+    @Test(groups = {"column"})
     public void shouldConsumeAllEventsFromDatabaseUsingBinlogAndNoSnapshot() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
         config = DATABASE.defaultConfig()
@@ -126,7 +126,7 @@ public class MySqlGeometryIT extends AbstractConnectorTest {
         });
     }
 
-    @Test(groups = {"test"})
+    @Test(groups = {"column"})
     public void shouldConsumeAllEventsFromDatabaseUsingSnapshot() throws SQLException, InterruptedException {
         // Use the DB configuration to define the connector's configuration ...
         config = DATABASE.defaultConfig().build();

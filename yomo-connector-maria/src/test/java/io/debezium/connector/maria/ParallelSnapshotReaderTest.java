@@ -27,7 +27,7 @@ import io.debezium.connector.maria.ParallelSnapshotReader.ParallelHaltingPredica
  */
 public class ParallelSnapshotReaderTest {
 
-    @Test
+    @Test(groups = {"parallel"})
     public void startStartsBothReaders() {
         BinlogReader mockOldBinlogReader = mock(BinlogReader.class);
         SnapshotReader mockNewSnapshotReader = mock(SnapshotReader.class);
@@ -44,7 +44,7 @@ public class ParallelSnapshotReaderTest {
         // chained reader will only start the snapshot reader
     }
 
-    @Test
+    @Test(groups = {"parallel"})
     public void pollCombinesBothReadersPolls() throws InterruptedException {
         BinlogReader mockOldBinlogReader = mock(BinlogReader.class);
         SnapshotReader mockNewSnapshotReader = mock(SnapshotReader.class);
@@ -74,7 +74,7 @@ public class ParallelSnapshotReaderTest {
         AssertJUnit.assertTrue(parallelRecords.contains(newSnapshotSourceRecord));
     }
 
-    @Test
+    @Test(groups = {"parallel"})
     public void pollReturnsNewIfOldReaderIsStopped() throws InterruptedException {
         BinlogReader mockOldBinlogReader = mock(BinlogReader.class);
         SnapshotReader mockNewSnapshotReader = mock(SnapshotReader.class);
@@ -102,7 +102,7 @@ public class ParallelSnapshotReaderTest {
     }
 
     // this test and the next don't appear to be halting. Something with the chained reader maybe.
-    @Test
+    @Test(groups = {"parallel"})
     public void pollReturnsOldIfNewReaderIsStopped() throws InterruptedException {
         BinlogReader mockOldBinlogReader = mock(BinlogReader.class);
         SnapshotReader mockNewSnapshotReader = mock(SnapshotReader.class);
@@ -125,7 +125,7 @@ public class ParallelSnapshotReaderTest {
         AssertJUnit.assertTrue(parallelRecords.contains(oldBinlogSourceRecord));
     }
 
-    @Test
+    @Test(groups = {"parallel"})
     public void pollReturnsNullIfBothReadersAreStopped() throws InterruptedException {
         BinlogReader mockOldBinlogReader = mock(BinlogReader.class);
         SnapshotReader mockNewSnapshotReader = mock(SnapshotReader.class);
@@ -145,7 +145,7 @@ public class ParallelSnapshotReaderTest {
         AssertJUnit.assertEquals(null, parallelRecords);
     }
 
-    @Test
+    @Test(groups = {"parallel"})
     public void testStopStopsBothReaders() {
         BinlogReader mockOldBinlogReader = mock(BinlogReader.class);
         SnapshotReader mockNewSnapshotReader = mock(SnapshotReader.class);
@@ -163,7 +163,7 @@ public class ParallelSnapshotReaderTest {
     }
 
 
-    @Test
+    @Test(groups = {"parallel"})
     public void testHaltingPredicateHonorsTimeRange() {
         // verify that halting predicate does nothing and changes no state if the
         // document's timestamp is outside of the time range.
@@ -183,7 +183,7 @@ public class ParallelSnapshotReaderTest {
         AssertJUnit.assertFalse(otherReaderNearEnd.get());
     }
 
-    @Test
+    @Test(groups = {"parallel"})
     public void testHaltingPredicateFlipsthisReaderNearEnd() {
         // verify that the halting predicate flips the `this reader` boolean if the
         // document's timestamp is within the time range, but still returns false.
@@ -204,7 +204,7 @@ public class ParallelSnapshotReaderTest {
         AssertJUnit.assertFalse(otherReaderNearEnd.get());
     }
 
-    @Test
+    @Test(groups = {"parallel"})
     public void testHaltingPredicateHalts() {
         // verify that the halting predicate returns false if both the 'this' and
         // 'other' reader are near the end of the binlog.

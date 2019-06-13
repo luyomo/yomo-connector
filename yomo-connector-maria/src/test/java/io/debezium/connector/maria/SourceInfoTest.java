@@ -38,7 +38,7 @@ public class SourceInfoTest {
     private long positionOfBeginEvent = 0L;
     private int eventNumberInTxn = 0;
 
-    @BeforeMethod
+    @BeforeMethod(groups = {"test", "sourceInfo"})
 	public void beforeEach() {
         source = new SourceInfo();
         inTxn = false;
@@ -46,7 +46,7 @@ public class SourceInfoTest {
         eventNumberInTxn = 0;
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromZeroBinlogCoordinates() {
         source.setBinlogStartPoint(FILENAME, 0);
         assertThat(source.binlogFilename()).isEqualTo(FILENAME);
@@ -56,7 +56,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isFalse();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromNonZeroBinlogCoordinates() {
         source.setBinlogStartPoint(FILENAME, 100);
         assertThat(source.binlogFilename()).isEqualTo(FILENAME);
@@ -69,7 +69,7 @@ public class SourceInfoTest {
     // Test reading the offset map and recovering the proper SourceInfo state
     // -------------------------------------------------------------------------------------
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRecoverSourceInfoFromOffsetWithZeroBinlogCoordinates() {
         sourceWith(offset(0, 0));
         assertThat(source.gtidSet()).isNull();
@@ -79,7 +79,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isFalse();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRecoverSourceInfoFromOffsetWithNonZeroBinlogCoordinates() {
         sourceWith(offset(100, 0));
         assertThat(source.gtidSet()).isNull();
@@ -89,7 +89,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isFalse();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRecoverSourceInfoFromOffsetWithZeroBinlogCoordinatesAndNonZeroRow() {
         sourceWith(offset(0, 5));
         assertThat(source.gtidSet()).isNull();
@@ -99,7 +99,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isFalse();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRecoverSourceInfoFromOffsetWithNonZeroBinlogCoordinatesAndNonZeroRow() {
         sourceWith(offset(100, 5));
         assertThat(source.gtidSet()).isNull();
@@ -109,7 +109,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isFalse();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRecoverSourceInfoFromOffsetWithZeroBinlogCoordinatesAndSnapshot() {
         sourceWith(offset(0, 0, true));
         assertThat(source.gtidSet()).isNull();
@@ -119,7 +119,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isTrue();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRecoverSourceInfoFromOffsetWithNonZeroBinlogCoordinatesAndSnapshot() {
         sourceWith(offset(100, 0, true));
         assertThat(source.gtidSet()).isNull();
@@ -129,7 +129,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isTrue();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRecoverSourceInfoFromOffsetWithZeroBinlogCoordinatesAndNonZeroRowAndSnapshot() {
         sourceWith(offset(0, 5, true));
         assertThat(source.gtidSet()).isNull();
@@ -139,7 +139,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isTrue();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRecoverSourceInfoFromOffsetWithNonZeroBinlogCoordinatesAndNonZeroRowAndSnapshot() {
         sourceWith(offset(100, 5, true));
         assertThat(source.gtidSet()).isNull();
@@ -149,7 +149,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isTrue();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRecoverSourceInfoFromOffsetWithFilterData() {
         final String databaseWhitelist = "a,b";
         final String tableWhitelist = "c.foo,d.bar,d.baz";
@@ -166,7 +166,7 @@ public class SourceInfoTest {
         assertThat(source.getTableBlacklist()).isNull();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void setOffsetFilterFromFilter() {
         final String databaseBlacklist = "a,b";
         final String tableBlacklist = "c.foo, d.bar, d.baz";
@@ -186,7 +186,7 @@ public class SourceInfoTest {
         assertEquals(tableBlacklist, source.getTableBlacklist());
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromBinlogCoordinatesWithGtidsAndZeroBinlogCoordinates() {
         sourceWith(offset(GTID_SET, 0, 0, false));
         assertThat(source.gtidSet()).isEqualTo(GTID_SET);
@@ -196,7 +196,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isFalse();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromBinlogCoordinatesWithGtidsAndZeroBinlogCoordinatesAndNonZeroRow() {
         sourceWith(offset(GTID_SET, 0, 5, false));
         assertThat(source.gtidSet()).isEqualTo(GTID_SET);
@@ -206,7 +206,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isFalse();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromBinlogCoordinatesWithGtidsAndNonZeroBinlogCoordinates() {
         sourceWith(offset(GTID_SET, 100, 0, false));
         assertThat(source.gtidSet()).isEqualTo(GTID_SET);
@@ -216,7 +216,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isFalse();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromBinlogCoordinatesWithGtidsAndNonZeroBinlogCoordinatesAndNonZeroRow() {
         sourceWith(offset(GTID_SET, 100, 5, false));
         assertThat(source.gtidSet()).isEqualTo(GTID_SET);
@@ -226,7 +226,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isFalse();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromBinlogCoordinatesWithGtidsAndZeroBinlogCoordinatesAndSnapshot() {
         sourceWith(offset(GTID_SET, 0, 0, true));
         assertThat(source.gtidSet()).isEqualTo(GTID_SET);
@@ -236,7 +236,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isTrue();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromBinlogCoordinatesWithGtidsAndZeroBinlogCoordinatesAndNonZeroRowAndSnapshot() {
         sourceWith(offset(GTID_SET, 0, 5, true));
         assertThat(source.gtidSet()).isEqualTo(GTID_SET);
@@ -246,7 +246,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isTrue();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromBinlogCoordinatesWithGtidsAndNonZeroBinlogCoordinatesAndSnapshot() {
         sourceWith(offset(GTID_SET, 100, 0, true));
         assertThat(source.gtidSet()).isEqualTo(GTID_SET);
@@ -256,7 +256,7 @@ public class SourceInfoTest {
         assertThat(source.isSnapshotInEffect()).isTrue();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldStartSourceInfoFromBinlogCoordinatesWithGtidsAndNonZeroBinlogCoordinatesAndNonZeroRowAndSnapshot() {
         sourceWith(offset(GTID_SET, 100, 5, true));
         assertThat(source.gtidSet()).isEqualTo(GTID_SET);
@@ -270,7 +270,7 @@ public class SourceInfoTest {
     // Test advancing SourceInfo state (similar to how the BinlogReader uses it)
     // -------------------------------------------------------------------------------------
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldAdvanceSourceInfoFromNonZeroPositionAndRowZeroForEventsWithOneRow() {
         sourceWith(offset(100, 0));
 
@@ -314,7 +314,7 @@ public class SourceInfoTest {
         handleTransactionCommit(760, 4);
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldAdvanceSourceInfoFromNonZeroPositionAndRowZeroForEventsWithMultipleRow() {
         sourceWith(offset(100, 0));
 
@@ -481,21 +481,21 @@ public class SourceInfoTest {
      * When we want to consume SinkRecord which generated by debezium-connector-mysql, it should not
      * throw error "org.apache.avro.SchemaParseException: Illegal character in: server-id"
      */
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldValidateSourceInfoSchema() {
         org.apache.kafka.connect.data.Schema kafkaSchema = SourceInfo.SCHEMA;
         Schema avroSchema = avroData.fromConnectSchema(kafkaSchema);
         assertTrue(avroSchema != null);
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldConsiderPositionsWithSameGtidSetsAsSame() {
         assertPositionWithGtids("IdA:1-5").isAtOrBefore(positionWithGtids("IdA:1-5")); // same, single
         assertPositionWithGtids("IdA:1-5,IdB:1-20").isAtOrBefore(positionWithGtids("IdA:1-5,IdB:1-20")); // same, multiple
         assertPositionWithGtids("IdA:1-5,IdB:1-20").isAtOrBefore(positionWithGtids("IdB:1-20,IdA:1-5")); // equivalent
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldConsiderPositionsWithSameGtidSetsAndSnapshotAsSame() {
         assertPositionWithGtids("IdA:1-5", true).isAtOrBefore(positionWithGtids("IdA:1-5", true)); // same, single
         assertPositionWithGtids("IdA:1-5,IdB:1-20", true).isAtOrBefore(positionWithGtids("IdA:1-5,IdB:1-20", true)); // same,
@@ -503,43 +503,43 @@ public class SourceInfoTest {
         assertPositionWithGtids("IdA:1-5,IdB:1-20", true).isAtOrBefore(positionWithGtids("IdB:1-20,IdA:1-5", true)); // equivalent
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldOrderPositionWithGtidAndSnapshotBeforePositionWithSameGtidButNoSnapshot() {
         assertPositionWithGtids("IdA:1-5", true).isAtOrBefore(positionWithGtids("IdA:1-5")); // same, single
         assertPositionWithGtids("IdA:1-5,IdB:1-20", true).isAtOrBefore(positionWithGtids("IdA:1-5,IdB:1-20")); // same, multiple
         assertPositionWithGtids("IdA:1-5,IdB:1-20", true).isAtOrBefore(positionWithGtids("IdB:1-20,IdA:1-5")); // equivalent
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"}, enabled=false)
     public void shouldOrderPositionWithoutGtidAndSnapshotAfterPositionWithSameGtidAndSnapshot() {
         assertPositionWithGtids("IdA:1-5", false).isAfter(positionWithGtids("IdA:1-5", true)); // same, single
         assertPositionWithGtids("IdA:1-5,IdB:1-20", false).isAfter(positionWithGtids("IdA:1-5,IdB:1-20", true)); // same, multiple
         assertPositionWithGtids("IdA:1-5,IdB:1-20", false).isAfter(positionWithGtids("IdB:1-20,IdA:1-5", true)); // equivalent
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldOrderPositionWithGtidsAsBeforePositionWithExtraServerUuidInGtids() {
         assertPositionWithGtids("IdA:1-5").isBefore(positionWithGtids("IdA:1-5,IdB:1-20"));
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldOrderPositionsWithSameServerButLowerUpperLimitAsBeforePositionWithSameServerUuidInGtids() {
         assertPositionWithGtids("IdA:1-5").isBefore(positionWithGtids("IdA:1-6"));
         assertPositionWithGtids("IdA:1-5:7-9").isBefore(positionWithGtids("IdA:1-10"));
         assertPositionWithGtids("IdA:2-5:8-9").isBefore(positionWithGtids("IdA:1-10"));
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldOrderPositionWithoutGtidAsBeforePositionWithGtid() {
         assertPositionWithoutGtids("filename.01", Integer.MAX_VALUE, 0, 0).isBefore(positionWithGtids("IdA:1-5"));
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldOrderPositionWithGtidAsAfterPositionWithoutGtid() {
         assertPositionWithGtids("IdA:1-5").isAfter(positionWithoutGtids("filename.01", 0, 0, 0));
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldComparePositionsWithoutGtids() {
         // Same position ...
         assertPositionWithoutGtids("fn.01", 1, 0, 0).isAt(positionWithoutGtids("fn.01", 1, 0, 0));
@@ -567,7 +567,7 @@ public class SourceInfoTest {
         assertPositionWithoutGtids("fn.01", 1, 1, 1).isAfter(positionWithoutGtids("fn.01", 1, 1, 0));
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"}, enabled=false)
     public void shouldComparePositionsWithDifferentFields() {
         Document history = positionWith("mysql-bin.000008", 380941551, "01261278-6ade-11e6-b36a-42010af00790:1-378422946,"
                 + "4d1a4918-44ba-11e6-bf12-42010af0040b:1-11002284,"
@@ -587,7 +587,7 @@ public class SourceInfoTest {
     }
 
     @FixFor("DBZ-107")
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldRemoveNewlinesFromGtidSet() {
         String gtidExecuted = "036d85a9-64e5-11e6-9b48-42010af0000c:1-2,\n" +
                 "7145bf69-d1ca-11e5-a588-0242ac110004:1-3149,\n" +
@@ -600,26 +600,26 @@ public class SourceInfoTest {
     }
 
     @FixFor("DBZ-107")
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldNotSetBlankGtidSet() {
         source.setCompletedGtidSet("");
         assertThat(source.gtidSet()).isNull();
     }
 
     @FixFor("DBZ-107")
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void shouldNotSetNullGtidSet() {
         source.setCompletedGtidSet(null);
         assertThat(source.gtidSet()).isNull();
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void versionIsPresent() {
         sourceWith(offset(100, 5, true));
         assertThat(source.struct().getString(SourceInfo.DEBEZIUM_VERSION_KEY)).isEqualTo(Module.version());
     }
 
-    @Test
+    @Test(groups = {"sourceInfo"})
     public void connectorIsPresent() {
         sourceWith(offset(100, 5, true));
         assertThat(source.struct().getString(SourceInfo.DEBEZIUM_CONNECTOR_KEY)).isEqualTo(Module.name());

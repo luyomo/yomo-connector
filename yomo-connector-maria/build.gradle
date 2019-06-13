@@ -36,7 +36,7 @@ dependencies {
     testCompile 'org.slf4j:slf4j-log4j12:1.7.25'
     testCompile 'junit:junit:4.12'
     testCompile 'org.testng:testng:6.9.5'
-    testCompile 'org.mockito:mockito-core:2.13.0'
+    testCompile 'org.mockito:mockito-core:2.28.2'
     testCompile 'org.easytesting:fest-assert:1.4'
     testCompile 'io.confluent:kafka-connect-avro-converter:5.1.2'
     compileOnly 'org.apache.kafka:connect-api:2.2.0'
