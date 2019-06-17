@@ -48,14 +48,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
     @BeforeMethod(groups = {"test","buffer"})
 	public void beforeEach() throws SQLException, InterruptedException {
     	DATABASE.setConnInfo("jdbc");
-        stopConnector();
-        DATABASE.createAndInitialize();
-//        RO_DATABASE.createAndInitialize();
-        initializeConnectorTestFramework();
-//        Testing.Files.delete(DB_HISTORY_PATH);
-        
-        
-    	try (MySQLConnection db = MySQLConnection.forTestDatabase(DATABASE.getDatabaseName(), DATABASE.getConnInfo());) {
+    	try (MySQLConnection db = MySQLConnection.forTestDatabase("mysql", DATABASE.getConnInfo());) {
             try (JdbcConnection connection = db.connect()) {
                 final Connection jdbc = connection.connection();
                
@@ -63,6 +56,11 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
                 statement.executeUpdate("reset master");
             }
         }
+        stopConnector();
+        DATABASE.createAndInitialize();
+//        RO_DATABASE.createAndInitialize();
+        initializeConnectorTestFramework();
+//        Testing.Files.delete(DB_HISTORY_PATH);
     }
 
     @AfterMethod(groups = {"test", "buffer"})
@@ -78,7 +76,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         }
     }
 
-    @Test(groups = {"buffer"})
+    @Test(groups = {"connect"})
     public void shouldCorrectlyManageRollback() throws SQLException, InterruptedException {
         String masterPort = System.getProperty("database.port", "3306");
         String replicaPort = System.getProperty("database.replica.port", "3306");
@@ -98,7 +96,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         // Start the connector ...
         start(MySqlConnector.class, config);
 
-        SourceRecords records = consumeRecordsByTopic(5 + 9 + 9 + 4 + 11 + 1); // 11 schema change records + 1 SET statement
+        SourceRecords records = consumeRecordsByTopic(8 + 2 + 2 + 27); // 8 table creation + db creation + 1 SET statement + 1 use + 28 insert
         
         // ---------------------------------------------------------------------------------------------------------------
         // Transaction with rollback
@@ -171,7 +169,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         // Start the connector ...
         start(MySqlConnector.class, config);
 
-        SourceRecords records = consumeRecordsByTopic(5 + 9 + 9 + 4 + 11 + 1); // 11 schema change records + 1 SET statement
+        SourceRecords records = consumeRecordsByTopic(2 + 2 + 8 + 27); // 11 schema change records + 1 SET statement
         // Testing.Print.enable();
 
         // ---------------------------------------------------------------------------------------------------------------
@@ -223,7 +221,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         // Start the connector ...
         start(MySqlConnector.class, config);
 
-        SourceRecords records = consumeRecordsByTopic(5 + 9 + 9 + 4 + 11 + 1); // 11 schema change records + 1 SET statement
+        SourceRecords records = consumeRecordsByTopic(2 + 2 + 8 + 27); // 11 schema change records + 1 SET statement
 
         // Testing.Print.enable();
 
@@ -286,7 +284,7 @@ public class BinlogReaderBufferIT extends AbstractConnectorTest {
         // Start the connector ...
         start(MySqlConnector.class, config);
 
-        SourceRecords records = consumeRecordsByTopic(5 + 9 + 9 + 4 + 11 + 1); // 11 schema change records + 1 SET statement
+        SourceRecords records = consumeRecordsByTopic(2 + 2 + 8 + 27); // 11 schema change records + 1 SET statement
         // Testing.Print.enable();
 
         // ---------------------------------------------------------------------------------------------------------------

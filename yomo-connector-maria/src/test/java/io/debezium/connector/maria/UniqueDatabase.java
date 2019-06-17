@@ -230,11 +230,12 @@ public class UniqueDatabase {
      * @return Configuration builder initialized with JDBC connection parameters.
      */
     public Configuration.Builder defaultJdbcConfigBuilder() {
+
         return Configuration.create()
-                .with(MySqlConnectorConfig.HOSTNAME, System.getProperty("database.hostname", "localhost"))
-                .with(MySqlConnectorConfig.PORT, System.getProperty("database.port", "3306"))
-                .with(MySqlConnectorConfig.USER, "snapper")
-                .with(MySqlConnectorConfig.PASSWORD, "snapperpass");
+                .with(MySqlConnectorConfig.HOSTNAME, dbConnInfo.get("hostname").toString() )
+                .with(MySqlConnectorConfig.PORT,     Integer.parseInt(dbConnInfo.get("port").toString())  )
+                .with(MySqlConnectorConfig.USER,     dbConnInfo.get("user").toString())
+                .with(MySqlConnectorConfig.PASSWORD, dbConnInfo.get("password").toString());
     }
 
     /**

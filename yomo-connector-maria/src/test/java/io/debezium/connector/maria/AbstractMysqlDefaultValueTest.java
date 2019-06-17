@@ -39,7 +39,7 @@ public class AbstractMysqlDefaultValueTest {
     private MySqlValueConverters converters;
     protected Function<MySqlValueConverters, AbstractDdlParser> parserProducer;
 
-    @BeforeClass
+    @BeforeClass(enabled=false)
     public void setUp() {
         converters = new MySqlValueConverters(JdbcValueConverters.DecimalMode.DOUBLE,
                                               TemporalPrecisionMode.CONNECT,
@@ -47,18 +47,8 @@ public class AbstractMysqlDefaultValueTest {
         parser = parserProducer.apply(converters);
         tables = new Tables();
     }
-    
-    @BeforeMethod
-    public void beforeEach() {
-    	
-    }
-    
-    @AfterMethod
-    public void afterEach() {
-    	
-    }
 
-    @Test
+    @Test(enabled=false)
     public void parseUnsignedTinyintDefaultValue() {
         String sql = "CREATE TABLE UNSIGNED_TINYINT_TABLE (" +
                 "    A TINYINT UNSIGNED NULL DEFAULT 0," +
@@ -84,7 +74,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("G").defaultValue()).isEqualTo((short) 255);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseUnsignedSmallintDefaultValue() {
         String sql = "CREATE TABLE UNSIGNED_SMALLINT_TABLE (\n" +
                 "  A SMALLINT UNSIGNED NULL DEFAULT 0,\n" +
@@ -109,7 +99,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("G").defaultValue()).isEqualTo(65535);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseUnsignedMediumintDefaultValue() {
         String sql = "CREATE TABLE UNSIGNED_MEDIUMINT_TABLE (\n" +
                 "  A MEDIUMINT UNSIGNED NULL DEFAULT 0,\n" +
@@ -134,7 +124,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("G").defaultValue()).isEqualTo(16777215);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseUnsignedIntDefaultValue() {
         String sql = "CREATE TABLE UNSIGNED_INT_TABLE (\n" +
                 "  A INT UNSIGNED NULL DEFAULT 0,\n" +
@@ -159,7 +149,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("G").defaultValue()).isEqualTo(4294967295L);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseUnsignedBigIntDefaultValueToLong() {
         String sql = "CREATE TABLE UNSIGNED_BIGINT_TABLE (\n" +
                 "  A BIGINT UNSIGNED NULL DEFAULT 0,\n" +
@@ -182,7 +172,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("F").defaultValue()).isEqualTo(0L);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseUnsignedBigIntDefaultValueToBigDecimal() {
         final MySqlValueConverters converters = new MySqlValueConverters(JdbcValueConverters.DecimalMode.DOUBLE,
                 TemporalPrecisionMode.CONNECT,
@@ -211,7 +201,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("G").defaultValue()).isEqualTo(new BigDecimal("18446744073709551615"));
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseStringDefaultValue() {
         String sql = "CREATE TABLE UNSIGNED_STRING_TABLE (\n" +
                 "  A CHAR NULL DEFAULT 'A',\n" +
@@ -235,7 +225,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("H").defaultValue()).isEqualTo(null);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseBitDefaultValue() {
         String sql = "CREATE TABLE BIT_TABLE (\n" +
                 "  A BIT(1) NULL DEFAULT NULL,\n" +
@@ -263,7 +253,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("J").defaultValue()).isEqualTo(new byte[] {15, 97, 1, 0});
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseBooleanDefaultValue() {
         String sql = "CREATE TABLE BOOLEAN_TABLE (\n" +
                 "  A BOOLEAN NULL DEFAULT 0,\n" +
@@ -281,7 +271,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("E").defaultValue()).isEqualTo(null);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseNumberDefaultValue() {
         String sql = "CREATE TABLE NUMBER_TABLE (\n" +
                 "  A TINYINT NULL DEFAULT 10,\n" +
@@ -302,7 +292,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("F").defaultValue()).isEqualTo(0d);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseRealDefaultValue() {
         String sql = "CREATE TABLE REAL_TABLE (\n" +
                 "  A REAL NOT NULL DEFAULT 1,\n" +
@@ -314,7 +304,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("B").defaultValue()).isEqualTo(null);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseNumericAndDecimalToDoubleDefaultValue() {
         String sql = "CREATE TABLE NUMERIC_DECIMAL_TABLE (\n" +
                 "  A NUMERIC NOT NULL DEFAULT 1.23,\n" +
@@ -330,7 +320,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("D").defaultValue()).isEqualTo(12.68d);
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseNumericAndDecimalToDecimalDefaultValue() {
         final MySqlValueConverters converters = new MySqlValueConverters(JdbcValueConverters.DecimalMode.PRECISE,
                 TemporalPrecisionMode.CONNECT,
@@ -348,7 +338,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("C").defaultValue()).isEqualTo(BigDecimal.valueOf(13));
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseTimeDefaultValue() {
         String sql = "CREATE TABLE TIME_TABLE (" +
                 "  A timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
@@ -386,7 +376,7 @@ public class AbstractMysqlDefaultValueTest {
         assertThat(table.columnWithName("O").defaultValue()).isEqualTo((Date.from(Instant.ofEpochMilli(0))));
     }
 
-    @Test
+    @Test(enabled=false)
     public void parseDateDefaultValue() {
         String sql = "CREATE TABLE DATE_TABLE (" +
                 "  A date NOT NULL DEFAULT '0000-00-00'," +
@@ -412,7 +402,7 @@ public class AbstractMysqlDefaultValueTest {
     
     //@FixFor("DBZ-901")
     
-    @Test
+    @Test(enabled=false)
     public void parseAlterTableTruncatedDefaulDateTime() {
         String sql = "CREATE TABLE TIME_TABLE (" +
                 "  A datetime(3) NOT NULL DEFAULT '0000-00-00 00:00:00.000'" +

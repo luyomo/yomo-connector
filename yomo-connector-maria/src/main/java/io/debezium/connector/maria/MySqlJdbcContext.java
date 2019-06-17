@@ -177,6 +177,27 @@ public class MySqlJdbcContext implements AutoCloseable {
 
         return !"OFF".equalsIgnoreCase(mode.get());
     }
+    
+    /**
+     * Determine the current gtid.
+     *
+     * @return the string representation of MySQL's GTID sets; never null but an empty string if the server does not use GTIDs
+     */
+    public String getCurrentGtid() {        
+        AtomicReference<String> gtidSetStr = new AtomicReference<String>();
+        try {
+            jdbc.query("select @@global.gtid_current_pos", rs -> {
+                if (rs.next() && rs.getMetaData().getColumnCount() > 0) {
+                    gtidSetStr.set(rs.getString(1)); // GTID set, may be null, blank, or contain a GTID set
+                }
+            });
+        } catch (SQLException e) {
+            throw new ConnectException("Unexpected error while connecting to MySQL and looking at GTID mode: ", e);
+        }
+
+        String result = gtidSetStr.get();
+        return result != null ? result : "";
+    }
 
     /**
      * Determine the available GTID set for MySQL.

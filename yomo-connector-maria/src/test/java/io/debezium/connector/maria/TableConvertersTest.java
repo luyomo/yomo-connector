@@ -15,27 +15,27 @@ import org.testng.Assert;
 @Ignore
 public class TableConvertersTest {
 
-    @Test
+    @Test(enabled=false)
     public void shouldHandleMetadataEventToUpdateTables() {
         Assert.fail("Not yet implemented");
     }
 
-    @Test
+    @Test(enabled=false)
     public void shouldProduceSourceRecorForMetadataEventWhenConfigured() {
         Assert.fail("Not yet implemented");
     }
 
-    @Test
+    @Test(enabled=false)
     public void shouldProduceSourceRecorForInsertEvent() {
         Assert.fail("Not yet implemented");
     }
 
-    @Test
+    @Test(enabled=false)
     public void shouldProduceSourceRecorForUpdateEvent() {
         Assert.fail("Not yet implemented");
     }
 
-    @Test
+    @Test(enabled=false)
     public void shouldProduceSourceRecorForDeleteEvent() {
         Assert.fail("Not yet implemented");
     }

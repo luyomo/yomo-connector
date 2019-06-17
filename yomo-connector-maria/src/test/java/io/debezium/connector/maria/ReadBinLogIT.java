@@ -167,7 +167,7 @@ public class ReadBinLogIT implements Testing {
         startClient(client -> {
             client.setBinlogFilename("mysql-bin.000001");
         });
-        counters.consumeAll(20, TimeUnit.SECONDS);
+        counters.consumeAll(10, TimeUnit.SECONDS);
     }
 
     @Test(groups = {"readBinlog"})

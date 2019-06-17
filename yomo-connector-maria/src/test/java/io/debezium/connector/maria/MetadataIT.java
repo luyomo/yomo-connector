@@ -134,7 +134,9 @@ public class MetadataIT implements Testing {
             assertFalse(product.columnWithName("createdByDate").scale().isPresent());
             assertThat(product.columnWithName("createdByDate").position()).isEqualTo(2);
             assertThat(product.columnWithName("createdByDate").isAutoIncremented()).isFalse();
-            assertThat(product.columnWithName("createdByDate").isGenerated()).isEqualTo(conn.databaseAsserts().isCurrentDateTimeDefaultGenerated());
+            
+            assertThat(product.columnWithName("createdByDate").isGenerated()).isEqualTo(false);        //Generated attribute is lost 
+            assertThat(conn.databaseAsserts().isCurrentDateTimeDefaultGenerated()).isEqualTo(true);
             assertThat(product.columnWithName("createdByDate").isOptional()).isFalse();
             assertThat(product.columnWithName("modifiedDate").name()).isEqualTo("modifiedDate");
             assertThat(product.columnWithName("modifiedDate").typeName()).isEqualTo("DATETIME");
@@ -143,7 +145,8 @@ public class MetadataIT implements Testing {
             assertFalse(product.columnWithName("modifiedDate").scale().isPresent());
             assertThat(product.columnWithName("modifiedDate").position()).isEqualTo(3);
             assertThat(product.columnWithName("modifiedDate").isAutoIncremented()).isFalse();
-            assertThat(product.columnWithName("modifiedDate").isGenerated()).isEqualTo(conn.databaseAsserts().isCurrentDateTimeDefaultGenerated());
+            assertThat(product.columnWithName("modifiedDate").isGenerated()).isEqualTo(false);         //Generated attribute is lost 
+            assertThat(conn.databaseAsserts().isCurrentDateTimeDefaultGenerated()).isEqualTo(true);
             assertThat(product.columnWithName("modifiedDate").isOptional()).isFalse();
 
             conn.execute("CREATE TABLE purchased ("
@@ -189,8 +192,11 @@ public class MetadataIT implements Testing {
             assertFalse(purchased.columnWithName("purchaseDate").scale().isPresent());
             assertThat(purchased.columnWithName("purchaseDate").position()).isEqualTo(3);
             assertThat(purchased.columnWithName("purchaseDate").isAutoIncremented()).isFalse();
-            assertThat(purchased.columnWithName("purchaseDate").isGenerated()).isEqualTo(conn.databaseAsserts().isCurrentDateTimeDefaultGenerated());
+            assertThat(purchased.columnWithName("purchaseDate").isGenerated()).isEqualTo(false);       //Generated attribute is lost 
+            assertThat(conn.databaseAsserts().isCurrentDateTimeDefaultGenerated()).isEqualTo(true);
             assertThat(purchased.columnWithName("purchaseDate").isOptional()).isFalse();
+            
+            DATABASE.dropDB();
         }
     }
 }

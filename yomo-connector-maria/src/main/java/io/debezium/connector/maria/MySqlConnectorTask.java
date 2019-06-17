@@ -181,7 +181,9 @@ public final class MySqlConnectorTask extends BaseSourceTask {
                                 + "required for this connector to work properly. Change the MySQL configuration to use a "
                                 + "row-level binlog and restart the connector.");
                     }
-                    BinlogReader binlogReader = new BinlogReader("binlog", taskContext, null);
+                    source.startGtid(connectionContext.getCurrentGtid(), null);
+                    source.commitTransaction();
+                    BinlogReader binlogReader = new BinlogReader("binlog", taskContext, null);                   
                     chainedReaderBuilder.addReader(binlogReader);
                 }
             } else {

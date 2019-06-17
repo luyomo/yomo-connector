@@ -80,11 +80,10 @@ public class MySqlYearIT extends AbstractConnectorTest {
         // Consume all of the events due to startup and initialization of the database
         // ---------------------------------------------------------------------------------------------------------------
         Testing.Debug.enable();
-        final int numDatabase = 3; // 2 CREATE + 1 DROP
-        final int numTables = 3;   // 2 CREATE + 1 DROP
+        final int numDatabase = 2; // 1 CREATE + 1 DROP
+        final int numTables = 2;   // 1 CREATE + 1 DROP
         final int numOthers = 2;   // 1 SET character_set_server + 1 USE DB
-        final int numInsert = 1;   // Insert in the snapshot
-        consumeRecords(numDatabase + numTables + numOthers + numInsert);
+        consumeRecords(numDatabase + numTables + numOthers);
 
         assertChangeRecordByDatabase();
 
@@ -131,11 +130,10 @@ public class MySqlYearIT extends AbstractConnectorTest {
         // Consume all of the events due to startup and initialization of the database
         // ---------------------------------------------------------------------------------------------------------------
         Testing.Debug.enable();
-        final int numDatabase = 3; // 2 CREATE + 1 DROP
-        final int numTables = 3;   // 2 CREATE + 1 DROP
+        final int numDatabase = 2; // 2 CREATE + 1 DROP
+        final int numTables = 2;   // 2 CREATE + 1 DROP
         final int numOthers = 2;   // 1 SET character_set_server + 1 USE DB
-        final int numInsert = 1;   // Insert in the snapshot
-        consumeRecords(numDatabase + numTables + numOthers + numInsert);
+        consumeRecords(numDatabase + numTables + numOthers);
 
         assertChangeRecordByConnector();
 
