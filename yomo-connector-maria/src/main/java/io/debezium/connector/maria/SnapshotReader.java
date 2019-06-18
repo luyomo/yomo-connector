@@ -572,7 +572,11 @@ public class SnapshotReader extends AbstractReader {
                                         // We were not able to finish all rows in all tables ...
                                         logger.info("Step {}: Stopping the snapshot due to thread interruption", stepNum);
                                         interrupted.set(true);
-                                    }
+                                    }  
+                                    // Should catch it and output to some special log file or not? Todo
+//                                    catch(Exception e) {
+//                                    	e.printStackTrace();
+//                                    }
                                 });
                             }
                             finally {

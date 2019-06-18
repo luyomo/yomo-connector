@@ -334,3 +334,15 @@ MARIA_ANNOTATE_ROWS_EVENT has not been implemented in the maria-binlog-connector
 this events should be impletemed in the next version.
 ** GENERATED
 The generated attribute has not been parsed in the current version. To be implemented in the next version.
+** Invalid data
+How to handle invalid data. like below query
+#+BEGIN_SRC
+INSERT IGNORE INTO dbz_114_zerovaluetest VALUES ('0001-00-00', '00:01:00.000', '0001-00-00 00:00:00.000','0001-00-00 00:00:00.000');
+#+END_SRC
+In the SnapshotReader->execute()
+#+BEGIN_SRC
+                                    // Should catch it and output to some special log file or not? Todo
+//                                    catch(Exception e) {
+//                                    e.printStackTrace();
+//                                    }}
+#+END_SRC
