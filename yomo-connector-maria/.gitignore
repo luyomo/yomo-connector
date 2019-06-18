@@ -1,1 +1,6 @@
 database.properties
+test-output/
+gradle.properties
+gradlew*
+bin
+gradle
