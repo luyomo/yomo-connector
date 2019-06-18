@@ -6,6 +6,7 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'eclipse'
+    id 'com.palantir.git-version' version '0.11.0'
 }
 
 repositories {
@@ -27,7 +28,7 @@ dependencies {
     compile 'io.debezium:debezium-core:0.9.5.Final'
     compile 'io.debezium:debezium-ddl-parser:0.9.5.Final'
     compile 'mysql:mysql-connector-java:8.0.13'
-    compile 'com.github.yomo:maria-binlog-connector-java:0.0.0'
+    compile 'com.github.yomo:maria-binlog-connector-java:0.0.1'
     testCompile 'mil.nga:wkb:1.0.2'
     testCompile group: 'io.debezium', name: 'debezium-core', version: '0.9.5.Final', classifier: 'tests'              
     testCompile group: 'io.debezium', name: 'debezium-embedded', version: '0.9.5.Final', classifier: 'tests'
@@ -54,7 +55,7 @@ task testsJar(type: Jar) {
 }
 
 group = 'io.debezium'
-version = '0.9.5.Final'
+version = getVersion()
 description = 'Debezium Connector for Maria'
 sourceCompatibility = '1.8'
 
