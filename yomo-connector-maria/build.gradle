@@ -55,7 +55,7 @@ task testsJar(type: Jar) {
 }
 
 group = 'io.debezium'
-version = getVersion()
+version gitVersion()
 description = 'Debezium Connector for Maria'
 sourceCompatibility = '1.8'
 
