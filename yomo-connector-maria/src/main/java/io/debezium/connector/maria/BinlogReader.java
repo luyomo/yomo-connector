@@ -768,7 +768,7 @@ public class BinlogReader extends AbstractReader {
                         eventHeader.getNextPosition(),
                         source.binlogFilename()
                 );
-                throw new ConnectException("Encountered change event for table " + tableId + "whose schema isn't known to this connector");
+                throw new ConnectException("Encountered change event for table " + tableId + " whose schema isn't known to this connector");
             }
             else if (inconsistentSchemaHandlingMode == EventProcessingFailureHandlingMode.WARN) {
                 logger.warn(
@@ -832,8 +832,10 @@ public class BinlogReader extends AbstractReader {
             Long ts = context.getClock().currentTimeInMillis();
             int count = 0;
             int numRows = rows.size();
+            source.setBinlogTimestampSeconds(event.getHeader().getTimestamp());
             if (startingRowNumber < numRows) {
                 for (int row = startingRowNumber; row != numRows; ++row) {
+                	// To get the timestamp from event header => event.getHeader().getTimestamp()
                     count += recordMaker.create(rows.get(row), ts, row, numRows);
                 }
                 if (logger.isDebugEnabled()) {
@@ -881,6 +883,7 @@ public class BinlogReader extends AbstractReader {
             Long ts = context.getClock().currentTimeInMillis();
             int count = 0;
             int numRows = rows.size();
+            source.setBinlogTimestampSeconds(event.getHeader().getTimestamp());
             if (startingRowNumber < numRows) {
                 for (int row = startingRowNumber; row != numRows; ++row) {
                     Map.Entry<Serializable[], Serializable[]> changes = rows.get(row);
@@ -932,6 +935,7 @@ public class BinlogReader extends AbstractReader {
             Long ts = context.getClock().currentTimeInMillis();
             int count = 0;
             int numRows = rows.size();
+            source.setBinlogTimestampSeconds(event.getHeader().getTimestamp());
             if (startingRowNumber < numRows) {
                 for (int row = startingRowNumber; row != numRows; ++row) {
                     count += recordMaker.delete(rows.get(row), ts, row, numRows);

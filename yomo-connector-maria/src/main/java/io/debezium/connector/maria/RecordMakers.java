@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.header.ConnectHeaders;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -228,6 +229,7 @@ public class RecordMakers {
                     Struct origin = source.struct(id);
                     SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
                             keySchema, key, envelope.schema(), envelope.read(value, origin, ts));
+                    
                     consumer.accept(record);
                     return 1;
                 }
@@ -246,7 +248,9 @@ public class RecordMakers {
                     Map<String, Object> offset = source.offsetForRow(rowNumber, numberOfRows);
                     Struct origin = source.struct(id);
                     SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
-                            keySchema, key, envelope.schema(), envelope.create(value, origin, ts));
+                            keySchema, key, envelope.schema(), envelope.create(value, origin, ts)
+                            , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
+                            , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ) ); // Added the timestamp of the transaction to header
                     consumer.accept(record);
                     return 1;
                 }
@@ -273,26 +277,37 @@ public class RecordMakers {
                         // Consumers may push the events into a system that won't allow both records to exist at the same time,
                         // so we first want to send the delete event for the old key...
                         SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
-                                keySchema, oldKey, envelope.schema(), envelope.delete(valueBefore, origin, ts));
+                                keySchema, oldKey, envelope.schema(), envelope.delete(valueBefore, origin, ts)
+                                , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
+                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ) );// Added the timestamp of the transaction to header
+
                         consumer.accept(record);
                         ++count;
 
                         if (emitTombstoneOnDelete) {
                             // Next send a tombstone event for the old key ...
-                            record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum, keySchema, oldKey, null, null);
+                            record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum, keySchema, oldKey, null, null
+                            		, source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
+                                    , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
                             consumer.accept(record);
                             ++count;
                         }
 
                         // And finally send the create event ...
                         record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
-                                keySchema, key, envelope.schema(), envelope.create(valueAfter, origin, ts));
+                                keySchema, key, envelope.schema(), envelope.create(valueAfter, origin, ts)
+                                , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
+                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
+
                         consumer.accept(record);
                         ++count;
                     } else {
                         // The key has not changed, so a simple update is fine ...
                         SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
-                                keySchema, key, envelope.schema(), envelope.update(valueBefore, valueAfter, origin, ts));
+                                keySchema, key, envelope.schema(), envelope.update(valueBefore, valueAfter, origin, ts)
+                                , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
+                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
+
                         consumer.accept(record);
                         ++count;
                     }
@@ -314,14 +329,20 @@ public class RecordMakers {
                     Struct origin = source.struct(id);
                     // Send a delete message ...
                     SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
-                            keySchema, key, envelope.schema(), envelope.delete(value, origin, ts));
+                            keySchema, key, envelope.schema(), envelope.delete(value, origin, ts)
+                            , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
+                            , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
+
                     consumer.accept(record);
                     ++count;
 
                     // And send a tombstone ...
                     if (emitTombstoneOnDelete) {
                         record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
-                                keySchema, key, null, null);
+                                keySchema, key, null, null
+                                , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
+                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
+
                         consumer.accept(record);
                         ++count;
                     }
@@ -439,7 +460,7 @@ public class RecordMakers {
          *
          * @param row the values of the row, in the same order as the columns in the {@link Table} definition in the
          *            {@link MySqlSchema}.
-         * @param ts the timestamp for this row
+         * @param ts the timestamp for this row when the data is generated from current java modules 
          * @param rowNumber the number of this row; must be 0 or more
          * @param numberOfRows the total number of rows to be read; must be 1 or more
          * @return the number of records produced; will be 0 or more

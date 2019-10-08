@@ -361,7 +361,8 @@ final class SourceInfo extends AbstractSourceInfo {
             // Don't put the GTID Set into the struct; only the current GTID is fine ...
             result.put(GTID_KEY, currentGtid);
         }
-        result.put(BINLOG_FILENAME_OFFSET_KEY, currentBinlogFilename);
+//        result.put(BINLOG_FILENAME_OFFSET_KEY, currentBinlogFilename);
+        result.put(BINLOG_FILENAME_OFFSET_KEY, "testFileName");
         result.put(BINLOG_POSITION_OFFSET_KEY, currentBinlogPosition);
         result.put(BINLOG_ROW_IN_EVENT_OFFSET_KEY, currentRowNumber);
         result.put(TIMESTAMP_KEY, binlogTimestampSeconds);
@@ -553,6 +554,9 @@ final class SourceInfo extends AbstractSourceInfo {
                tableWhitelist != null || tableBlacklist != null;
     }
 
+    public Long getBinlogTimestampSeconds() {
+    	return binlogTimestampSeconds;
+    }
     public String getDatabaseWhitelist() {
         return databaseWhitelist;
     }
@@ -583,12 +587,12 @@ final class SourceInfo extends AbstractSourceInfo {
             // We have previously recorded an offset ...
             setCompletedGtidSet((String) sourceOffset.get(GTID_SET_KEY)); // may be null
             restartEventsToSkip = longOffsetValue(sourceOffset, EVENTS_TO_SKIP_OFFSET_KEY);
-            String binlogFilename = (String) sourceOffset.get(BINLOG_FILENAME_OFFSET_KEY);
-            if (binlogFilename == null) {
-                throw new ConnectException("Source offset '" + BINLOG_FILENAME_OFFSET_KEY + "' parameter is missing");
-            }
-            long binlogPosition = longOffsetValue(sourceOffset, BINLOG_POSITION_OFFSET_KEY);
-            setBinlogStartPoint(binlogFilename, binlogPosition);
+//            String binlogFilename = (String) sourceOffset.get(BINLOG_FILENAME_OFFSET_KEY);
+//            if (binlogFilename == null) {
+//                throw new ConnectException("Source offset '" + BINLOG_FILENAME_OFFSET_KEY + "' parameter is missing");
+//            }
+//            long binlogPosition = longOffsetValue(sourceOffset, BINLOG_POSITION_OFFSET_KEY);
+//            setBinlogStartPoint(binlogFilename, binlogPosition);
             this.restartRowsToSkip = (int) longOffsetValue(sourceOffset, BINLOG_ROW_IN_EVENT_OFFSET_KEY);
             nextSnapshot = booleanOffsetValue(sourceOffset, SNAPSHOT_KEY);
             lastSnapshot = nextSnapshot;

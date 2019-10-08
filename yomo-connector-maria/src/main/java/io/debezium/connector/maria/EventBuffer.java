@@ -75,7 +75,7 @@ class EventBuffer {
         if (event == null) {
             return;
         }
-
+        LOGGER.info("*** Come to the event buffer ");
         // we're reprocessing events of the current TX between the position where the
         // buffer was full and the end of the TX; in this case there's nothing to do
         // besides directly emitting the events

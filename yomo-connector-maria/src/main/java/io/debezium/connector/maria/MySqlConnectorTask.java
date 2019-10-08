@@ -41,7 +41,8 @@ import io.debezium.util.LoggingContext.PreviousContext;
 @NotThreadSafe
 public final class MySqlConnectorTask extends BaseSourceTask {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger logger =     LoggerFactory.getLogger(getClass());
+    
     private volatile MySqlTaskContext taskContext;
     private volatile MySqlJdbcContext connectionContext;
     private volatile ChainedReader readers;
@@ -67,6 +68,7 @@ public final class MySqlConnectorTask extends BaseSourceTask {
 
         try {
             // Get the offsets for our partition ...
+        	logger.info("Updated Initializing MySqlConnector source ...");
             boolean startWithSnapshot = false;
             boolean snapshotEventsAreInserts = true;
             Map<String, String> partition = Collect.hashMapOf(SourceInfo.SERVER_PARTITION_KEY, serverName);
@@ -79,11 +81,17 @@ public final class MySqlConnectorTask extends BaseSourceTask {
                 source = taskContext.source();
                 // Set the position in our source info ...
                 source.setOffset(offsets);
+                
+                // This logic is only used for test setting the start point
+                if(config.getString("gtid.restart") != null) {
+                	logger.debug("The debug starting offset point is {}", config.getString("gtid.restart"));
+                	source.setCompletedGtidSet(config.getString("gtid.restart"));
+                }
                 logger.info("Found existing offset: {}", offsets);
 
                 // First check if db history is available
                 if (!taskContext.historyExists()) {
-                    if (taskContext.isSchemaOnlyRecoverySnapshot()) {
+                    if (taskContext.isSchemaOnlyRecoverySnapshot() || taskContext.isSchemaOnlySnapshot()) {
                         startWithSnapshot = true;
 
                         logger.info("The db-history topic is missing but we are in {} snapshot mode. " +
@@ -118,25 +126,29 @@ public final class MySqlConnectorTask extends BaseSourceTask {
             } else {
                 // We have no recorded offsets ...
                 this.taskContext = createAndStartTaskContext(config, getAllFilters(config));
+                logger.info("Get the connection context");
                 taskContext.initializeHistoryStorage();
                 this.connectionContext = taskContext.getConnectionContext();
                 source = taskContext.source();
+                
+                // This logic is only used for test setting the start point
+                if(config.getString("gtid.restart") != null) {
+                	logger.debug("The debug starting offset point is {}", config.getString("gtid.restart"));
+                	source.setCompletedGtidSet(config.getString("gtid.restart"));
+                }
 
                 if (taskContext.isSnapshotNeverAllowed()) {
                     // We're not allowed to take a snapshot, so instead we have to assume that the binlog contains the
                     // full history of the database.
                     logger.info("Found no existing offset and snapshots disallowed, so starting at beginning of binlog");
-                    source.setBinlogStartPoint("", 0L);     // start from the beginning of the binlog
-                    taskContext.initializeHistory();
-
-                    // Look to see what the first available binlog file is called, and whether it looks like binlog files have
-                    // been purged. If so, then output a warning ...
-                    String earliestBinlogFilename = earliestBinlogFilename();
-                    if (earliestBinlogFilename == null) {
-                        logger.warn("No binlog appears to be available. Ensure that the MySQL row-level binlog is enabled.");
-                    } else if (!earliestBinlogFilename.endsWith("00001")) {
-                        logger.warn("It is possible the server has purged some binlogs. If this is the case, then using snapshot mode may be required.");
+                     
+                    if (taskContext.getConnectorConfig().gtidNewChannelPosition() == MySqlConnectorConfig.GtidNewChannelPosition.LATEST) {
+                    	source.setCompletedGtidSet("");
+                    }else {
+                    	source.setCompletedGtidSet(earliestGtidList());
+                    	taskContext.loadHistory(source);
                     }
+                    
                 } else {
                     // We are allowed to use snapshots, and that is the best way to start ...
                     startWithSnapshot = true;
@@ -144,12 +156,6 @@ public final class MySqlConnectorTask extends BaseSourceTask {
                     logger.info("Found no existing offset, so preparing to perform a snapshot");
                     // The snapshot will also initialize history ...
                 }
-            }
-
-            if (!startWithSnapshot && source.gtidSet() == null && connectionContext.isGtidModeEnabled()) {
-                // The snapshot will properly determine the GTID set, but we're not starting with a snapshot and GTIDs were not
-                // previously used but the MySQL server has them enabled ...
-                source.setCompletedGtidSet("");
             }
 
             // Check whether the row-level binlog is enabled ...
@@ -476,6 +482,34 @@ public final class MySqlConnectorTask extends BaseSourceTask {
             return null;
         }
         return logNames.get(0);
+    }
+    
+    /**
+     * Determine the earliest gtid list that is still available in the server.
+     *
+     * @return the earlist gtid list, or null if there are none.
+     */
+    protected String earliestGtidList() {
+    	String earliestBinlogFilename = earliestBinlogFilename();
+    	if (earliestBinlogFilename == null) {
+    		logger.warn("No binlog appears to be available. Ensure that the MySQL row-level binlog is enabled.");
+    	} else if (!earliestBinlogFilename.endsWith("00001")) {
+    		logger.warn("It is possible the server has purged some binlogs. If this is the case, then using snapshot mode may be required.");
+    	}
+    	
+        // Accumulate the available binlog filenames ...
+        AtomicReference<String> gtidList = new AtomicReference<String>("");
+        try {
+            logger.info("Checking the earlest gtid from MARIADB");
+            connectionContext.jdbc().query("select binlog_gtid_pos('" + earliestBinlogFilename + "', 0)", rs -> {
+                while (rs.next()) {
+                	gtidList.set(rs.getString(1));
+                }
+            });
+        } catch (SQLException e) {
+            throw new ConnectException("Unexpected error while connecting to MySQL and looking for binary logs: ", e);
+        }
+        return gtidList.get();
     }
 
     /**

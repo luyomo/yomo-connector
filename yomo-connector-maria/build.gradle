@@ -6,7 +6,7 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'eclipse'
-    id 'com.palantir.git-version' version '0.11.0'
+    id 'com.palantir.git-version' version '0.12.2'
 }
 
 repositories {

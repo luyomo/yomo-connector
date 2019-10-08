@@ -239,7 +239,7 @@ public final class MySqlTaskContext extends CdcSourceTaskContext {
     public boolean isSchemaOnlyRecoverySnapshot() {
         return snapshotMode() == SnapshotMode.SCHEMA_ONLY_RECOVERY;
     }
-
+    
     protected SnapshotMode snapshotMode() {
         String value = config.getString(MySqlConnectorConfig.SNAPSHOT_MODE);
         return SnapshotMode.parse(value, MySqlConnectorConfig.SNAPSHOT_MODE.defaultValueAsString());
