@@ -1,0 +1,14 @@
+#+BEGIN_SRC plantuml :file ./img/schema.mindMap.png
+(Unknown Schema) -> (No loaded Schema)
+(No loaded Schema) -> (When load)
+(No loaded Schema) -> (Where load)
+(No loaded Schema) -> (relationship from schema history topic)
+(No loaded Schema) -> (??Schema = table definition + kafka connects)
+(When load) -> (ParallelSnapshotReader)
+(Where load) -> (ParallelSnapshotReader)
+(When load) -> (MySqlConnectorTask)
+(Where load) -> (MySqlConnectorTask)
+(relationship from schema history topic) -> (schema history topic looks like)
+(relationship from schema history topic) -> (How initialized)
+(How initialized) -> (Only take back schema earlier than point)
+#+END_SRC

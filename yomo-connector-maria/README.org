@@ -1,4 +1,352 @@
-* Unit test
+#+OPTIONS: ^:nil
+
+* Connector call flow
+** ConnectStandalone
+*** How to link the work and task
+1. ConnectStandard->
+     StandaloneHerder.putConnectorConfig->validateConnectorConfig
+          AbstractHerder->validateConnectorConfig
+                  io.debezium.connector.maria.MySqlConnector -> getConnector
+                  Connector connector = plugins().newConnector(connType);
+                  Config config = connector.validate(connectorProps);
+                  1.1 MySqlConnector -> validate
+                  all the props from the config file
+                  1.2 MysqlConnector->config()
+     StandaloneHerder.putConnectorConfig->startConnector
+                 worker.startConnector
+                   workerConnector.transitionTo
+                     WorkerConnector.start.dostart
+                       -> 1.3 MySqlConnector.start
+     StandaloneHerder.putConnectorConfig->updateConnectorTasks->recomputeTaskConfigs
+                worker.connectorTaskConfigs
+                  -> 1.4 MySqlConnector.taskConfigs
+
+2. java.lang.Thread#run()
+  WorkerSourceTask
+    -> WorkerTask->run->doRun->execute
+      -> WorkSourceTask
+        -> MySqlConnectorTask.start
+
+
+
+createConnectorTasks
+Work->startTask
+*** How the data push to kafka
+BinlogReader
+EventBuffer->add->consumeEvent
+
+
+WorkerTask->run->doRun
+  WorkerSourceTask->execute->sendRecords
+*** How to push the offset to kafka
+  SourceTaskOffsetCommitter->schedule->commit
+    WorkerSourceTask->commitOffsets
+*** QA
+**** =Encountered change event for table bodb100.tablereplistatuswhose schema isn't known to this connector=
+***** Root cause
+[[./img/schema.01.png]]
+;#+INCLUDE: "./org/schema.01.org"
+***** Mind Map
+#+INCLUDE: "./org/schema.mindMap.org"
+  + The schema does not exists in the tableSchema
+    - When the schema info should be loaded
+      + If new table is added into the config, need to call the schema initialization(ParallelSnapshotReader,newTablesInConfig)
+      + Load the schema when the offset from storage is not null
+    - Where/How the schema info is loaded from
+    - What's the relationship between the schema info and the schema history topic in the kafka
+    - ??Schema = table definition + kafka connects
+
+***** Schema load
+There are two cases to load the schema info.
+  + It's the first time to start the connect, when there is no offset from the storage. The snapshot will be called to initialize it.
+  + When the offset from storage is found, it will be initialized from the kafka topic.
+  + MySqlTaskContext:new->MySqlSchema:new
+    - Get the server name
+    - Get the config
+    - Get the MySqlJdbcContext
+    - Get the topicSelector
+    - Initialize the source info
+    - Set the excludeGTID and includeGTID
+    - =MySqlSchema:new=
+    - recordMakers<=schema
+
+[[./img/schema.init.call.flow.png]]
+
+;#+INCLUDE: "../org/schema.init.call.flow.org"
+
+How the MysqlSchema is used in the connector
+[[./img/schema.net.png]]
+;#+INCLUDE: "./org/schema.net.org"
+
+    #+attr_latex: :environment longtable
+    | MySqlTaskContext         | MySqlSchema             | KafkaDatabaseHistory | Comment                 |
+    |--------------------------+-------------------------+----------------------+-------------------------|
+    | historyExists            | historyExists           | exists               |                         |
+    | initializeHistory        | applyDdl                | record               | Please find the comment |
+    | initializeHistoryStorage | intializeHistoryStorage | initializeStorage    |                         |
+    | loadHistory              | loadHistory             | recover              |                         |
+    | shutdown                 | shutdown                | stop                 |                         |
+
+ + initializeHistory
+   - Run query against db [SHOW VARIABLES WHERE Variable_name IN ('character_set_server','collation_server')]
+   - add [character_set_server/collation_server] to
+[[./img/schema.init.seq.png]]
+;#+INCLUDE: "./org/schema.init.seq.org"
+
+****** ParallelSnapshotReader:
+Todo
+****** MySqlConnectorTask
+[Only when offset is not null]
+start->
+  createAndStartTaskContext
+
+***** TODO How the schema history looks like
+Now the schema is copied from the file directly, which hide some info.
+Prepare one golang to read all the histoic topic to view it clearly.
++ Change character
+   #+BEGIN_SRC
+{
+  "source" : {
+    "server" : "bodb100.01"
+  },
+  "position" : {
+    "file" : "BINLOG.001610",
+    "pos" : 30884386,
+    "gtids" : "1-301-18950598,1303-303-45,18473-18457-680959,1303-303-45,18473-18457-680959",
+    "snapshot" : true
+  },
+  "ddl" : "SET character_set_server=utf8mb4, collation_server=utf8mb4_unicode_ci;"
+}
+   #+END_SRC
++ Drop table
+    #+BEGIN_SRC
+{
+  "source" : {
+    "server" : "bodb100.01"
+  },
+  "position" : {
+    "file" : "BINLOG.001610",
+    "pos" : 30884386,
+    "gtids" : "1-301-18950598,1303-303-45,18473-18457-680959,1303-303-45,18473-18457-680959",
+    "snapshot" : true
+  },
+  "ddl" : "DROP TABLE IF EXISTS `bodb100`.`51test`"
+}
+    #+END_SRC
++ Create table
+    #+BEGIN_SRC
+{
+  {
+    "server" : "bodb100.01"
+  },
+  "position" : {
+    "file" : "BINLOG.001610",
+    "pos" : 31449555,
+    "gtids" : "1-301-18951143,1303-303-45,18473-18457-680959,1303-303-45,18473-18457-680959",
+    "snapshot" : true
+  },
+    "databaseName" : "bodb100",
+    "ddl" : "CREATE TABLE `trade` (
+    `Trade_Pk` bigint(20) NOT NULL,
+    `Trade_Date` date NOT NULL,
+    ... ...
+    $Sell_Trade_Ntl` decimal(20,8) NOT NULL DEFAULT 0.00000000,
+    PRIMARY KEY (`Trade_Pk`)
+ ,  UNIQUE KEY `Unique_Trade` ($Trade_Time`,`ME_Trade_ID`)
+   ) ENGINE=InnoDB DEFAULT $HARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+}
+#+END_SRC
+***** How is the schema inserted into the kafka topic
+
++ How the schema is inserted into the kafka topic
+  So far there are two ways to push the schema into the kafka topic.
+  - Copy the schema from db to kafka throgh snapshort reader. One question mark is how determine the GTID to topic when reading the data from db directly
+  - Push the change schema into kafka topic from the binlog file.
+  - ?? If the schema history is very long, in the initialization phase the load will be very slow since it will have to go through all the schema.
+  - If the retention passed, some schema will be roll out from the the schema kafka. How the connect start without such schema info.
+[[./img/schema.init.schema.hist.png]]
+
+#+BEGIN_COMMENT
+#+BEGIN_SRC plantuml :file ./img/schema.init.schema.hist.png
+usecase AbstractReader.start as "AbstractReader
+..
+start"
+usecase SnapshotReader.doStart as "SnapshotReader
+..
+doStart"
+
+usecase SnapshotReader.execute as "SnapshotReader
+..
+execute"
+
+usecase BinlogReader.handleQueryEvent as "BinlogReader
+..
+handleQueryEvent"
+
+usecase MySqlTaskContext.initializeHistory as "MySqlTaskContext
+..
+initializeHistory"
+
+usecase MySqlTaskContext.loadHistory as "MySqlTaskContext
+..
+loadHistory"
+
+usecase MySqlConnectorTask.start as "MySqlConnectorTask
+..
+start"
+
+usecase ReconcilingBinlogReader.setupUnifiedReader as "ReconcilingBinlogReader
+..
+setupUnifiedReader"
+
+usecase BinlogReader.doStart as "BinlogReader
+..
+doStart"
+
+usecase BinlogReader.eventHandlers.getOrDefault as "BinlogReader
+..
+eventHandlers
+.getOrDefault"
+
+
+(AbstractReader.start) -> (BinlogReader.doStart) : Through abstract class
+(AbstractReader.start) -> (SnapshotReader.doStart) : Through abstract class
+(SnapshotReader.doStart) -> (SnapshotReader.execute)
+(BinlogReader.doStart) -> (BinlogReader.handleQueryEvent) : register to eventHandlers
+(BinlogReader.doStart) -> (BinlogReader.eventHandlers.getOrDefault)
+(SnapshotReader.execute) -> (applyDdl)
+(BinlogReader.handleQueryEvent) -> (applyDdl)
+(BinlogReader.handleQueryEvent) ..> (eventHandlers)
+(eventHandlers) ..> (BinlogReader.eventHandlers.getOrDefault)
+(BinlogReader.eventHandlers.getOrDefault) -> (BinlogReader.handleQueryEvent) : Call when eventType is QUERY
+(X) -> (MySqlTaskContext.initializeHistory)
+(MySqlTaskContext.initializeHistory) -> (applyDdl)
+(MySqlTaskContext.loadHistory) -> (applyDdl)
+(MySqlConnectorTask.start) -> (MySqlTaskContext.loadHistory)
+(ReconcilingBinlogReader.setupUnifiedReader) -> (MySqlTaskContext.loadHistory) : To analyze
+(MySqlConnectorTask.start) -> (ReconcilingBinlogReader.setupUnifiedReader) : To analyze
+
+#+END_SRC
+#+END_COMMENT
+
+
+#+BEGIN_COMMENT
+#+BEGIN_SRC plantuml :file ./img/schema.init.snap.flow.png
+start
+:start;
+:snapshotReader.doStart;
+:snapshotReader.execute;
+:;metrics.snapshotStarted;
+:disabling autocommit and enabling repeatable read transactions;
+:Generate charset-related statement;
+:flush and obtain global read lock to prevent writes to database;
+:start transaction with consistent snapshot;
+:READ BINLOG POSITION;
+:Get the list of databases;
+:READ TABLE NAMES;
+:LOCK TABLES and READ BINLOG POSITION;
+partition SchemaSnapshot {
+#LightBlue:Transform the current schema so that it reflects the *current* state of the MySQL server's contents.;
+  :Set the charset system variables;
+  :Add all tables into one list;
+  :Generate DROP TABLE ddl statement for each table;
+  :Generate DROP DATABASE ddl statement for each database;
+  :generate DROP DATABASE IF EXISTS;
+  :generate CREATE DATABASE ;
+  :generate use;
+  repeat
+    :run SHOW CREATE TABLE against db;
+    :applyddl to schema history;
+  repeat while (last table)
+  :context.makeRecords.regenerate();
+}
+:Copy all the data;
+:commit or rollback;
+:release locks;
+#+END_SRC
+#+END_COMMENT
+
+
+#+BEGIN_SRC plantuml :file ./img/schema.snapshot.tree.png
+(offset) -> (history) : is null
+(history) -> (isSchemaOnlyRecoverySnapshot) : not exists
+(isSchemaOnlyRecoverySnapshot) -> (initializeHistoryStorage)  : yes
+(initializeHistoryStorage) -> (true)
+(isSchemaOnlyRecoverySnapshot) -> (exception) : no
+
+(history) -> (loadHistory) : exists
+(loadHistory) -> (isSnapshotInEffect)
+(isSnapshotInEffect) -> (isSnapshotNeverAllowed) : yes
+(isSnapshotNeverAllowed)  -> (exception) : yes
+(isSnapshotNeverAllowed)  -> (true) : no
+
+(isSnapshotInEffect) -> (false) : no
+
+(offset) -> (isSnapshotNeverAllowed-02) : is not null
+(isSnapshotNeverAllowed-02) -> (false) : yes
+(isSnapshotNeverAllowed-02) -> (true) : no
+#+END_SRC
+
+
+***** How schema only is used to load into the kafka topic.
+  + Get the partition + offset of the schema history to start
+  + Read the schema from start until the position(partition + offset)
+
+***** How the ConnectRecord push into topic?
+producer.send ->
+  runtime/WorkerSourceTask.java
+  util/KafkaBasedLog.java
+
+How the BlockingConsumer's accept connected to the producer.send
+WorkerSourceTask.toSend
+WorkerSourceTask.sendRecords
+
+[[./img/record.insert.flow.png]]
+;#+INCLUDE: "./org/record.insert.flow.org"
+
+[[; ./img/schema.hist.offset.reader.class.png]]
+
+#+INCLUDE: "./org/schema.hist.offset.reader.class.org"
+
+#+INCLUDE: "./org/record.push.to.kafka.org"
+
+At WorkerSourceTask's toSend
+#+BEGIN_SRC
+Headers: null
+kafkaPartition: null
+key
+  schema: Schema{bodb100.01.bodb100.tablereplistatus.Key:STRUCT}
+  values: [380708]
+
+#+END_SRC
+
+  + bufferSizeForBinlogReader == 0
+    - handleEvent
+  + bufferSizeForBinlogReader > 0
+    - EventBuffer
+
+#+BEGIN_SRC
+kafkaOffset: 0
+kafkaPartition: 0
+key:            Struct{id=202}
+keySchema:      Schema{vcdb100.vcdb100.withdrawal.Key:STRUCT}
+timestamp:      1570451043033
+timestampType:  CreateTime
+topic:          vcdb100.vcdb100.withdrawal
+value:          Struct{id=202,bank_code=0001,bank_name=\u307f\u305a\u307b\u9280\u884c,bank_name_kana=\uff90\uff7d\uff9e\uff8e,branch_code=100,branch_name=\u672c\u5e97,branch_name_kana=\uff8e\uff9d\uff83\uff9d,bank_account_type=SAVING,bank_account_number=1111111,bank_account_holder=\u30ab\u30af\u3000\u30e9\u30a4,fee=258,total_amount=499742,return_amount=-499742,withdrawal_file_id=7}
+valueSchema:    Schema{vcdb100.vcdb100.withdrawal.Value:STRUCT}
+#+END_SRC
+
+
+***** SinkTask
+#+INCLUDE: "org/sink.pull.seq.org"
+
+**** Test
++ SchemaOnly
++ Add table to whitelist
++ multiple database
++ Clean
+* UNIT test
     | test case                              | result             | success/all | comment                                      |
     |----------------------------------------+--------------------+-------------+----------------------------------------------|
     | BinlogReaderBufferIT.java              | O                  |             |                                              |
@@ -346,3 +694,6 @@ In the SnapshotReader->execute()
 //                                    e.printStackTrace();
 //                                    }}
 #+END_SRC
+
+** When the offset commit to __consumer in the sink connector
+KafkaConsumer->commitAsync->[coordinator.commitOffsetsAsync(new HashMap<>(offsets), callback);]

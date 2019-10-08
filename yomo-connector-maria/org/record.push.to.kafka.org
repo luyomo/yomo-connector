@@ -1,0 +1,28 @@
+#+BEGIN_SRC plantuml :file img/record.push.to.kafka.png
+box WorkerSourceTask << class >>
+participant new
+participant execute
+participant poll
+participant recordPollReturned
+participant sendRecords
+end box
+
+ConnectStandalone -> Worker : new (ConnectDistributed is same)
+ConnectStandalone -> Worker : startTask
+Worker -> Worker : buildWorkerTask
+Worker -> new
+WorkerSourceTask -> WorkerTask : (inherit)
+WorkerTask -> WorkerTask : run
+WorkerTask -> WorkerTask : doRun
+WorkerTask -> execute
+group get data from AbstractRead's records
+execute -> poll
+poll ->  MySqlConnectorTask : poll(SourceTask -> \rBaseSourceTask -> \rMySqlConnectorTask)
+MySqlConnectorTask -> AbstractReader : poll
+AbstractReader.poll -> BinlogReader : pollComplete
+end
+execute -> recordPollReturned
+group push data to kafka
+recordPollReturned -> sendRecords : Send record to kafka topic
+end
+#+END_SRC

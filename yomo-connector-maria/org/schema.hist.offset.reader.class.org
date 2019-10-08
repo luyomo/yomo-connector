@@ -1,0 +1,17 @@
+#+BEGIN_SRC plantuml :file ./img/schema.hist.offset.reader.class.png
+class OffsetBackingStore
+class KafkaOffsetBackingStore
+class MemoryOffsetBackingStore
+class OffsetStorageReader
+class OffsetStorageReaderImpl
+
+OffsetBackingStore ..> KafkaOffsetBackingStore
+OffsetBackingStore ..> MemoryOffsetBackingStore
+
+MemoryOffsetBackingStore ..>  FileOffsetBackingStore
+
+OffsetStorageReader ..> OffsetStorageReaderImpl
+
+
+OffsetStorageReader --> OffsetBackingStore
+#+END_SRC

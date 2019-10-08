@@ -1,0 +1,34 @@
+#+BEGIN_SRC plantuml :file ./img/sink.pull.seq.png
+box "class WorkerSinkTask"
+participant execute
+participant initializeAndStart
+participant iteration
+participant poll
+participant pollConsumer
+participant convertMessages
+participant deliverMessages
+end box
+
+box "class KafkaConsumer"
+participant subscribe
+participant KafkaConsumer.poll
+end box
+
+group sink connect initialization
+execute -> initializeAndStart
+initializeAndStart -> subscribe
+end
+
+group Fetch data from kafka
+execute -> iteration
+iteration -> poll
+poll -> pollConsumer
+poll -> convertMessages
+poll -> deliverMessages
+deliverMessages -> KafkaConsumer.poll
+end
+
+group Push data into sink
+deliverMessages -> SinkTask : put
+end
+#+END_SRC

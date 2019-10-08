@@ -1,0 +1,20 @@
+#+BEGIN_SRC plantuml :file ./org/schema.init.seq.org
+box "class MySqlSchema"
+participant new <<new>>
+end box
+
+box "class MySqlConnectorConfig"
+participant getDdlParsingMode << function >>
+end box
+
+box "class KafkaDatabaseHistory"
+participant configure << function >>
+end box
+
+new -> getDdlParsingMode
+new -> Configuration.config.getInstance : MySqlConnectorConfig.DATABASE_HISTORY(KafkaDatabaseHistory)
+new -> HistoryRecordComparator : todo
+new -> configure
+configure -> configure : (super:AbstractDatabaseHistory)
+configure -> configure
+#+END_SRC

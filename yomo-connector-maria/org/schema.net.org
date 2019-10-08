@@ -1,0 +1,31 @@
+#+BEGIN_SRC plantuml :file ./org/schema.net.org
+usecase SnapshotReader as "SnapshotReader
+..
+execute"
+
+usecase handleQueryEvent as "BinlogReader
+..
+handleQueryEvent"
+
+usecase informUnknown as "BinlogReader
+..informAboutUnknown
+TableIfRequired"
+
+usecase start as "MySqlTaskContext
+..
+start"
+
+(BinlogReaderMetrics)->(dbSchema<f>)
+(SnapshotReader)->(dbSchema<f>)
+(handleQueryEvent)->(dbSchema<f>)
+(informUnknown)->(dbSchema<f>)
+(BinlogReader)->(dbSchema<f>)
+(start)->(dbSchema<f>)
+(dbSchema<f>)->(dbSchema)
+(historyExists)-> (dbSchema)
+(initializeHistory) -> (dbSchema)
+(initializeHistoryStorage) -> (dbSchema)
+(loadHistory) -> (dbSchema)
+(MySqlTaskContext:new) -> (dbSchema)
+(shutdown) -> (dbSchema)
+#+END_SRC

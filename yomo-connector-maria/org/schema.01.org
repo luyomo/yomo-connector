@@ -1,0 +1,18 @@
+#+BEGIN_SRC plantuml :file img/schema.01.png
+  box "Class BinlogReader" #LightBlue
+    participant doStart << function >>
+    participant handleEvent  << function >>
+    participant eventHandlers.getOrDefault  << function >>
+    participant handleUpdateTableMetadata  << function >>
+    participant informAboutUnknownTableIfRequired  << function >>
+  end box
+  box "Class RecordMaker"
+    participant assign << function >>
+  end box
+
+  doStart -> handleEvent
+  handleEvent -> eventHandlers.getOrDefault
+  eventHandlers.getOrDefault -> handleUpdateTableMetadata : function registered in the eventHandlers
+  handleUpdateTableMetadata -> assign : Failed because the tableSchema does not exists
+  handleUpdateTableMetadata -> informAboutUnknownTableIfRequired
+#+END_SRC

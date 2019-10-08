@@ -1,0 +1,35 @@
+#+BEGIN_SRC plantuml :file img/record.insert.flow.png
+participant BinlogReader
+participant RecordsForTable
+
+box WorkSourceTask << class >>
+participant execute
+participant poll
+participant recordPollReturned
+participant sendRecords
+end box
+
+BinlogReader -> BinlogReader : handleInsert
+group Key Point
+BinlogReader -[#red]> RecordsForTable : forTable(\rAbstractReader:\renqueueRecord => consumer)
+note right
+This function is the key to
+link the RecordsForTable and
+AbstractReader.
+end note
+end
+BinlogReader <- RecordsForTable : return RecordsForTable
+BinlogReader -> RecordsForTable : create
+RecordsForTable -> RecordMaker.Converter : insert
+RecordMaker.Converter -> SourceRecord : new
+SourceRecord -> Envelope : schema
+SourceRecord -> Envelope : create
+group Key point 2
+RecordMaker.Converter -> BlockingConsumer : accept(\rAbstractReader:enqueueRecord \r => enqueueRecord)
+note left
+The envelope message is pushed
+into AbstractReader.records
+end note
+end
+BlockingConsumer -> BufferedBlockingConsumer : accept(Implementation)
+#+END_SRC

@@ -1,0 +1,7 @@
+#+BEGIN_SRC plantuml :file ../org/schema.init.call.flow.org
+(MySqlConnectTask:start) -> (ParallelSnapshotReader:new)
+(ParallelSnapshotReader:new) -> (MySqlTaskContext:new) : Without CaseInsensitive flag and restartOffset
+(MySqlConnectTask:start) -> (MySqlConnectTask:createAndStartTaskContext)
+(MySqlConnectTask:createAndStartTaskContext) -> (MySqlTaskContext:new): With CaseInsensitive flag and restartOffset
+(MySqlTaskContext:new) -> (MySqlSchema:new)
+#+END_SRC

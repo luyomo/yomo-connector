@@ -1,0 +1,10 @@
+#+BEGIN_SRC plantuml :file ./img/record.insert.eventbuffer.flow.png
+BinlogReader -> EventBuffer : new
+BinlogReader -> EventBuffer : add
+EventBuffer -> BinlogReader : handleEvent(isReplayingEventsBeyondBufferCapacity)
+EventBuffer -> EventBuffer : beginTransaction(GTID Event)
+EventBuffer -> EventBuffer : (complete transaction)
+EventBuffer -> EventBuffer : completeTransaction(XID event)
+EventBuffer -> EventBuffer : consumeEvent
+EventBuffer -> EventBuffer : addToBuffer
+#+END_SRC
