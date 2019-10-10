@@ -341,11 +341,101 @@ valueSchema:    Schema{vcdb100.vcdb100.withdrawal.Value:STRUCT}
 ***** SinkTask
 #+INCLUDE: "org/sink.pull.seq.org"
 
+***** snaphot mode
+  + Type
+    + schema_only
+    + schema_only_recovery
+    + initial
+    + initial_only
+    + when_needed
+    + never
+  + Process
+    + Initialization
+      - SET TRANSACTION ISOLATION LEVEL REPEATABLE READ
+      - non-committing
+      - Set character
+    + FLUSH TABLES WITH READ LOCK
+    + START TRANSACTION WITH CONSISTENT SNAPSHOT
+    + readBinlogPosition
+      - if schema_only_recovery && no binlogFilename => exception
+      - if schema_only_recovery => lastSnapshot: true/nextSnapshot:true
+      - else  SHOW MASTER STATUS => (binlogFilename/binlogPosition/Gtidset)
+    + SHOW DATABASES
+    + LOCK TABLS and READ BINLOG POSITION
+      - LOCK TABLES
+      - FLUSH TABLES tablename WITH READ LOCK
+      - readBinlogPosition
+    + Generate schema ddl
+      - DROP TABLE IF EXISTS tableName
+      - DROP DATABASE IF EXISTS databaseName
+      - CREATE DATABASE databaseName
+      - USE databaseName
+      - SHOW CREATE TABLE to ddl
+    + UNLOCK TABLES
+    + Copy data to kafka
+      - tableId, bufferedRecordQueue  => recordMaker (with schema)
+      - USE databaName
+      - SHOW TABLE STATUS LIKE tableName
+      - SELECT * FROM tableName
+    + mark last snapshot
+      - lastSnapshot : true / nextSnapshot : false
+    + commit/rollback
+    + UNLOCK TABLES
+    + completeSnapshot
+      - lastSnapshot : false / nextSnapshot : false
+  + Question
+    + How schema_only ignore the data copy
+      | SnapshotMode         | Value | Comment               |
+      |----------------------+-------+-----------------------|
+      | WHEN_NEEDED          | true  | include data snapshot |
+      | INITIAL              | true  | no data snapshot      |
+      | SCHEMA_ONLY          | false | no data snapshot      |
+      | SCHEMA_ONLY_RECOVERY | false | no data snapshot      |
+      | NEVER                | false | no data snapshot      |
+      | INITIAL_ONLY         | true  | include data snapshot |
+    + What's the meaning of lastSnapshot/nextSnaphot
+      | lastSnapshot | nextSnapshot | function         | comment                                           |
+      |--------------+--------------+------------------+---------------------------------------------------|
+      | true         | false        | new              | Initialization                                    |
+      | true         | true         | startSnapshot    | a snapshot is being (or has been) started         |
+      | true         | false        | markLastSnapshot | a snapshot will be complete after one last record |
+      | false        | false        | completeSnapshot | a snapshot has completed                          |
+      | nextSnapshot | from source  | setOffset        | ??                                                |
+      - lastSnapshot
+        The lastSnapshot flag is used to show whethere the data is is pushed to kafka from snapshot.
+      - nextSnapshot
+        Determine whether a snapshot is currently in effect. The startup will throw exception if meeting the below conditions
+        + offsets from storage is not null
+        + history topic exists
+        + The snapshot is in effect
+        + snapshot_mode is never
+
+***** metrics
+
+***** How to convert event to kafka record
+
+ + TableMapEventData
+   + tableNumber  : 156424
+   + databaseName : vcdb200
+   + tableId
+     - catalogName: vcdb200
+     - id: vcdb200.batch_job_execution
+     - schemaName: null
+     - tablename: batch_job_execution
+   + recordMakers.ssign
+
+SourceRecord{sourcePartition={server=sbtest.01}
+, sourceOffset={ts_sec=1570579381, file=BINLOG.001668, pos=16444501, gtids=1-301-19039911,1303-303-45,18473-18457-680960, server_id=301, event=1}}
+   ConnectRecord{topic='sbtest.01', kafkaPartition=0
+      , key=Struct{databaseName=sbtest}
+      , keySchema=Scema{io.debezium.connector.maria.SchemaChangeKey:STRUCT}, value=Struct{source=Struct{version=0.0.1,connector=mysql,name=sbtest.01,server_id=301,ts_sec=1570579381,gtid=1-301-19039912,file=testFileName,pos=16444543,row=0},databaseName=sbtest,ddl=truncate table t1}, valueSchema=Schema{io.debezium.connector.maria.SchemaChangeValue:STRUCT}, timestamp=null, headers=ConnectHeaders(headers=)}
+
 **** Test
 + SchemaOnly
 + Add table to whitelist
 + multiple database
 + Clean
+
 * UNIT test
     | test case                              | result             | success/all | comment                                      |
     |----------------------------------------+--------------------+-------------+----------------------------------------------|
