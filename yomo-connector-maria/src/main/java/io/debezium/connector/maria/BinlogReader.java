@@ -713,57 +713,44 @@ public class BinlogReader extends AbstractReader {
             }
         });
         
-        sendTruncateToTopic(sql, event);
+        sendTruncateToTopic(sql, event, command.getDatabase());
     }
     
     // Transform the truncate statement to message to send to table topic
-    private void sendTruncateToTopic(String _sql, Event _event) throws InterruptedException  {
-    	Pattern __regrex = Pattern.compile("truncate (.*)\\.(.*)");
+    private void sendTruncateToTopic(String _sql, Event _event, String _database) throws InterruptedException  {
+    	//Pattern __regrex = Pattern.compile("truncate (.*)\\.(.*)|truncate table (.*)\\.(.*)", Pattern.CASE_INSENSITIVE);
+    	Pattern __regrex = Pattern.compile("(?)truncate(\\s+table|)\\s+(.*)", Pattern.CASE_INSENSITIVE);
+    	
     	Matcher __matchedTable = __regrex.matcher(_sql);
         // Check whether the query is truncate table
     	if (__matchedTable.find()) {
-           logger.info("{} {} is to truncate", __matchedTable.group(1), __matchedTable.group(2) ); 
+            logger.info("{} is to truncate", __matchedTable.group(2));
+            String databaseName, tableName;
+            if (__matchedTable.group(2).contains(".")) {
+            	String[] __tmp = __matchedTable.group(2).split("\\.");
+            	databaseName = __tmp[0];
+            	tableName = __tmp[1];
+            }else {
+            	databaseName = _database;
+            	tableName = __matchedTable.group(2);
+            }
 
-           // Set the tableId
-           //long tableNumber = 156020; // metadata.getTableId();
+            TableId tableId = new TableId(databaseName, null, tableName);
+            long tableNumber = recordMakers.getTableNumberByTableId(tableId) ; // metadata.getTableId();
            
-           String databaseName = __matchedTable.group(1);
-           String tableName = __matchedTable.group(2);
-           //String databaseName = "sbtest";
-           //String tableName = "t1";
-           TableId tableId = new TableId(databaseName, null, tableName);
-           long tableNumber = recordMakers.getTableNumberByTableId(tableId) ; // metadata.getTableId();
-           
-           if (recordMakers.assign(tableNumber, tableId)) {
+            if (recordMakers.assign(tableNumber, tableId)) {
                logger.debug("Received table truncate event: {}", _event);
-           }else {
+            }else {
                informAboutUnknownTableIfRequired(_event, tableId, "table truncate");
-           }
+            }
            
-           // DeleteRowsEventData deleted = unwrapData(event);
-           // How to get the table id here
-           //long tableNumber = deleted.getTableId();
-           //BitSet includedColumns = deleted.getIncludedColumns();
-           //RecordsForTable recordMaker = recordMakers.forTable(tableNumber, includedColumns, super::enqueueRecord);
-           //RecordsForTable recordMaker = recordMakers.forTable(tableNumber, new BitSet(), super::enqueueRecord);
-           
-           // The BitSet includedColumns is not used in delete statement, use this value to determine the truncate flag.
-           RecordsForTable recordMaker = recordMakers.forTable(tableNumber, null, super::enqueueRecord);
-           if (recordMaker != null) {
-           // List<Serializable[]> rows = null;
-           Long ts = context.getClock().currentTimeInMillis();
-               //  int count = 0;
-               //  int numRows = rows.size();
-           //source.setBinlogTimestampSeconds(_event.getHeader().getTimestamp());
-           source.setBinlogTimestampSeconds(1570607999);
-           
-               // if (startingRowNumber < numRows) {
-               // for (int row = startingRowNumber; row != numRows; ++row) {
-           //recordMaker.delete(rows.get(row), ts, row, numRows);
-              
-				recordMaker.delete(new Object[1], ts, 1, 1);
-			
-           }
+            RecordsForTable recordMaker = recordMakers.forTable(tableNumber, null, super::enqueueRecord);
+            if (recordMaker != null) {
+                Long ts = context.getClock().currentTimeInMillis();
+                source.setBinlogTimestampSeconds(_event.getHeader().getTimestamp());
+
+                recordMaker.delete(new Object[1], ts, 1, 1);
+            }
         } else {
            logger.debug("{} is not a truncate sql", _sql);
         }
