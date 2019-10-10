@@ -111,6 +111,20 @@ public class RecordMakers {
         Converter converter = convertersByTableNumber.get(tableNumber);
         return converter != null;
     }
+    
+    /**
+     * Get the tableNumber from tableId if there is a record maker for the given table.
+     *
+     * @param tableId the identifier of the table
+     * @return {@code Long} 
+     */
+    public Long getTableNumberByTableId(TableId tableId) {
+        Long tableNumber = tableNumbersByTableId.get(tableId);
+        if ( tableNumber == null ) {
+            return null;
+        }
+        return tableNumber;
+    }
 
     /**
      * Obtain the record maker for the given table, using the specified columns and sending records to the given consumer.
@@ -327,11 +341,22 @@ public class RecordMakers {
                     Map<String, ?> partition = source.partition();
                     Map<String, Object> offset = source.offsetForRow(rowNumber, numberOfRows);
                     Struct origin = source.struct(id);
+                    
+                    ConnectHeaders __header = new ConnectHeaders();
+                    
+                    // Set the transaction timestamp into header
+                    __header.addLong("tx_ms", source.getBinlogTimestampSeconds());
+                    
+                    // If the includedColuns is null, it is called from one truncate statement.
+                    if (includedColumns == null) {
+                    	__header.addBoolean("truncate", true);
+                    }
+                    
                     // Send a delete message ...
                     SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
                             keySchema, key, envelope.schema(), envelope.delete(value, origin, ts)
                             , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
-                            , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
+                            , __header);// Added the timestamp of the transaction to header
 
                     consumer.accept(record);
                     ++count;
@@ -341,7 +366,7 @@ public class RecordMakers {
                         record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
                                 keySchema, key, null, null
                                 , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
-                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
+                                , __header);// Added the timestamp of the transaction to header
 
                         consumer.accept(record);
                         ++count;
