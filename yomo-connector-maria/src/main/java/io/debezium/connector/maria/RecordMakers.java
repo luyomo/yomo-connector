@@ -141,6 +141,90 @@ public class RecordMakers {
         }
         return new RecordsForTable(converter, includedColumns, consumer);
     }
+    
+    /**
+     * Obtain the record maker for the given table's truncate statement.
+     *
+     * @param _tableId the tableId for which records are to be produced
+     * @param consumer the consumer for all produced records; may not be null
+     * @return the table-specific record maker; may be null if the table is not included in the connector
+     */
+    public RecordsForTable forTruncateTable( TableId _tableId, BlockingConsumer<SourceRecord> consumer) {
+    	String topicName = topicSelector.topicNameFor(_tableId);
+    	Integer partitionNum = null;
+    	TableSchema tableSchema = schema.schemaFor(_tableId);
+    	if (tableSchema == null) {
+    		logger.error("The schema does not exist {}", _tableId.toString());
+    		return null;
+    	}
+        Converter converter = new Converter() {
+
+            @Override
+            public int read(SourceInfo source, Object[] row, int rowNumber, int numberOfRows, BitSet includedColumns, long ts,
+                            BlockingConsumer<SourceRecord> consumer)
+                    throws InterruptedException {
+                return 0;
+            }
+
+            @Override
+            public int insert(SourceInfo source, Object[] row, int rowNumber, int numberOfRows, BitSet includedColumns, long ts,
+                              BlockingConsumer<SourceRecord> consumer)
+                    throws InterruptedException {
+                return 0;
+            }
+
+            @Override
+            public int update(SourceInfo source, Object[] before, Object[] after, int rowNumber, int numberOfRows, BitSet includedColumns,
+                              long ts,
+                              BlockingConsumer<SourceRecord> consumer)
+                    throws InterruptedException {
+                return 0;
+            }
+
+            @Override
+            public int delete(SourceInfo source, Object[] row, int rowNumber, int numberOfRows, BitSet includedColumns, long ts,
+                              BlockingConsumer<SourceRecord> consumer)
+                    throws InterruptedException {
+                int count = 0;
+                
+                Object key = tableSchema.keyFromColumnData(row);
+                //Struct value = tableSchema.valueFromColumnData(row);
+                if (key != null) {
+                    Schema keySchema = tableSchema.keySchema();
+                    if(keySchema == null) {
+                    	logger.info("error02: The keySchema does not exist ");
+                    }
+                    Map<String, ?> partition = source.partition();
+                    Map<String, Object> offset = source.offsetForRow(rowNumber, numberOfRows);
+                    
+                    ConnectHeaders __header = new ConnectHeaders();
+                    
+                    // Set the transaction timestamp into header
+                    __header.addLong("tx_ms", source.getBinlogTimestampSeconds());
+                    
+                    // If the includedColuns is null, it is called from one truncate statement.
+                  	__header.addBoolean("truncate", true);
+                    
+                    SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
+                    		keySchema, key, null, null
+                            , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
+                            , __header);// Added the timestamp of the transaction to header
+
+                    consumer.accept(record);
+                    ++count;
+                }
+                return count;
+            }
+
+            @Override
+            public String toString() {
+                return "RecordMaker.Converter(" + _tableId + ")";
+            }
+
+        };
+
+        return new RecordsForTable(converter, null, consumer);
+    }
 
     /**
      * Produce a schema change record for the given DDL statements.
@@ -346,11 +430,6 @@ public class RecordMakers {
                     
                     // Set the transaction timestamp into header
                     __header.addLong("tx_ms", source.getBinlogTimestampSeconds());
-                    
-                    // If the includedColuns is null, it is called from one truncate statement.
-                    if (includedColumns == null) {
-                    	__header.addBoolean("truncate", true);
-                    }
                     
                     // Send a delete message ...
                     SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,

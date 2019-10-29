@@ -12,24 +12,32 @@ import java.io.Serializable;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.header.ConnectHeaders;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.event.Level;
 
@@ -59,6 +67,7 @@ import com.github.yomo.maria.binlog.network.SSLSocketFactory;
 
 import io.debezium.connector.maria.MySqlConnectorConfig.EventProcessingFailureHandlingMode;
 import io.debezium.connector.maria.MySqlConnectorConfig.SecureConnectionMode;
+import io.debezium.connector.maria.RecordMakers.Converter;
 import io.debezium.connector.maria.RecordMakers.RecordsForTable;
 import io.debezium.function.BlockingConsumer;
 import io.debezium.heartbeat.Heartbeat;
@@ -718,7 +727,6 @@ public class BinlogReader extends AbstractReader {
     
     // Transform the truncate statement to message to send to table topic
     private void sendTruncateToTopic(String _sql, Event _event, String _database) throws InterruptedException  {
-    	//Pattern __regrex = Pattern.compile("truncate (.*)\\.(.*)|truncate table (.*)\\.(.*)", Pattern.CASE_INSENSITIVE);
     	Pattern __regrex = Pattern.compile("(?)truncate(\\s+table|)\\s+(.*)", Pattern.CASE_INSENSITIVE);
     	
     	Matcher __matchedTable = __regrex.matcher(_sql);
@@ -734,22 +742,29 @@ public class BinlogReader extends AbstractReader {
             	databaseName = _database;
             	tableName = __matchedTable.group(2);
             }
-
+            List<Pattern> tableWhitelistPattern = Strings.listOfRegex(context.config().getString(MySqlConnectorConfig.TABLE_WHITELIST), Pattern.CASE_INSENSITIVE);
+            
             TableId tableId = new TableId(databaseName, null, tableName);
-            long tableNumber = recordMakers.getTableNumberByTableId(tableId) ; // metadata.getTableId();
-           
-            if (recordMakers.assign(tableNumber, tableId)) {
-               logger.debug("Received table truncate event: {}", _event);
-            }else {
-               informAboutUnknownTableIfRequired(_event, tableId, "table truncate");
+            
+            // Check whether the table is in scope
+            AtomicBoolean __isInWhitelist = new AtomicBoolean(false);
+            tableWhitelistPattern.forEach(pattern -> {
+            	if(pattern.asPredicate().test(tableId.toString())) __isInWhitelist.set(true);
+            });
+
+            if(__isInWhitelist.get() == false) {
+            	return;
             }
-           
-            RecordsForTable recordMaker = recordMakers.forTable(tableNumber, null, super::enqueueRecord);
+            
+            RecordsForTable recordMaker = recordMakers.forTruncateTable(tableId, super::enqueueRecord);
             if (recordMaker != null) {
                 Long ts = context.getClock().currentTimeInMillis();
                 source.setBinlogTimestampSeconds(_event.getHeader().getTimestamp());
 
                 recordMaker.delete(new Object[1], ts, 1, 1);
+            }else {
+            	logger.error("Failed to create the recordMaker to push truncate message to topic");
+            	throw new RuntimeException("Failed to send create recordMaker to push tuncate message to topic. To check whether the schema is properly initialized");
             }
         } else {
            logger.debug("{} is not a truncate sql", _sql);
