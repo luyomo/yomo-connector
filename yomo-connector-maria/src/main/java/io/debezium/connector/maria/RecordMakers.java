@@ -286,6 +286,19 @@ public class RecordMakers {
             return sourceOffset;
         }
     }
+    
+    private Long getNullFlag(Object[] _row) {
+    	BitSet __bitSet = new BitSet(_row.length);
+    	for(int __i=0; __i< _row.length; __i++) {
+    		if(_row[__i] == null) __bitSet.set(__i);
+    	}
+    	logger.debug(__bitSet.toLongArray().toString());
+    	
+    	if (__bitSet.toLongArray().length == 0)
+    		return (long)0;
+    	else
+    	    return __bitSet.toLongArray()[0];
+    }
 
     /**
      * Assign the given table number to the table with the specified {@link TableId table ID}.
@@ -345,10 +358,13 @@ public class RecordMakers {
                     Map<String, ?> partition = source.partition();
                     Map<String, Object> offset = source.offsetForRow(rowNumber, numberOfRows);
                     Struct origin = source.struct(id);
+                    
                     SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
                             keySchema, key, envelope.schema(), envelope.create(value, origin, ts)
                             , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
-                            , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ) ); // Added the timestamp of the transaction to header
+                            , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )  // Added the timestamp of the transaction to header
+                              .addLong("null_bit_flag", getNullFlag(row))       //Get the Null flag for each items (Added by chou@20191119)
+                    		); 
                     consumer.accept(record);
                     return 1;
                 }
@@ -377,7 +393,9 @@ public class RecordMakers {
                         SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
                                 keySchema, oldKey, envelope.schema(), envelope.delete(valueBefore, origin, ts)
                                 , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
-                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ) );// Added the timestamp of the transaction to header
+                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )  // Added the timestamp of the transaction to header
+                                  .addLong("null_bit_flag", getNullFlag(after))//Get the Null flag for each items (Added by chou@20191119)
+                        		);
 
                         consumer.accept(record);
                         ++count;
@@ -386,7 +404,9 @@ public class RecordMakers {
                             // Next send a tombstone event for the old key ...
                             record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum, keySchema, oldKey, null, null
                             		, source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
-                                    , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
+                                    , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )  // Added the timestamp of the transaction to header
+                                      .addLong("null_bit_flag", getNullFlag(after))  //Get the Null flag for each items (Added by chou@20191119)
+                            		);
                             consumer.accept(record);
                             ++count;
                         }
@@ -395,7 +415,9 @@ public class RecordMakers {
                         record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
                                 keySchema, key, envelope.schema(), envelope.create(valueAfter, origin, ts)
                                 , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
-                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
+                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )// Added the timestamp of the transaction to header
+                                  .addLong("null_bit_flag", getNullFlag(after))  //Get the Null flag for each items (Added by chou@20191119)
+                        		);
 
                         consumer.accept(record);
                         ++count;
@@ -404,7 +426,9 @@ public class RecordMakers {
                         SourceRecord record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum,
                                 keySchema, key, envelope.schema(), envelope.update(valueBefore, valueAfter, origin, ts)
                                 , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
-                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() ));// Added the timestamp of the transaction to header
+                                , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )  // Added the timestamp of the transaction to header
+                                .addLong("null_bit_flag", getNullFlag(after))  //Get the Null flag for each items (Added by chou@20191119)
+                        		);
 
                         consumer.accept(record);
                         ++count;
