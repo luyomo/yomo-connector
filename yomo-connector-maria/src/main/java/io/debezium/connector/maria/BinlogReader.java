@@ -13,31 +13,27 @@ import java.security.GeneralSecurityException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.header.ConnectHeaders;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.event.Level;
 
@@ -67,7 +63,6 @@ import com.github.yomo.maria.binlog.network.SSLSocketFactory;
 
 import io.debezium.connector.maria.MySqlConnectorConfig.EventProcessingFailureHandlingMode;
 import io.debezium.connector.maria.MySqlConnectorConfig.SecureConnectionMode;
-import io.debezium.connector.maria.RecordMakers.Converter;
 import io.debezium.connector.maria.RecordMakers.RecordsForTable;
 import io.debezium.function.BlockingConsumer;
 import io.debezium.heartbeat.Heartbeat;
@@ -345,9 +340,31 @@ public class BinlogReader extends AbstractReader {
             //    gtidSet = new com.github.yomo.maria.binlog.GtidSet(filteredGtidSetStr);
             //} else {
                 // We've not yet seen any GTIDs, so that means we have to start reading the binlog from the beginning ...
-                client.setBinlogFilename(source.binlogFilename());
-                client.setBinlogPosition(source.binlogPosition());
-                client.setGtidList(source.getRestartGtids());
+            		
+            client.setBinlogFilename(source.binlogFilename());
+            client.setBinlogPosition(source.binlogPosition());
+            //client.setGtidList( filterGtids( source.getRestartGtids() ) );
+            if(context.config().getString("gtid.domain.blacklist") != null || context.config().getString("gtid.domain.whitelist") != null) {
+            	String[] lstDomainBlacklist = (context.config().getString("gtid.domain.blacklist")!=null)?context.config().getString("gtid.domain.blacklist").split(","):null;
+            	String[] lstDomainWhitelist = (context.config().getString("gtid.domain.whitelist")!=null)?context.config().getString("gtid.domain.whitelist").split(","):null;
+            	
+            	List<String> filterGtids = new ArrayList<String>();
+            	
+            	String gtid = source.getRestartGtids();
+            	Stream.of(gtid.split(",")).forEach(elem -> { 
+    				String[] splitGtid = new String(elem).split("-");
+    				if(lstDomainBlacklist != null && Arrays.asList(lstDomainBlacklist).contains(splitGtid[0]) ) {
+    					return;
+    				}
+    				if(lstDomainWhitelist == null || Arrays.asList(lstDomainWhitelist).contains(splitGtid[0])) {
+    				    filterGtids.add(elem);
+    				}
+    		    });
+            	logger.info("The filtered gtids after whitelist and blacklist is {}", String.join(",", new ArrayList<String>(filterGtids)));
+            	client.setGtidList( String.join(",", new ArrayList<String>(filterGtids)) );
+            }else {
+                client.setGtidList( source.getRestartGtids() );
+            }
                 //gtidSet = new com.github.yomo.maria.binlog.GtidSet("");
             //}
         } else {
@@ -886,6 +903,7 @@ public class BinlogReader extends AbstractReader {
         WriteRowsEventData write = unwrapData(event);
         long tableNumber = write.getTableId();
         BitSet includedColumns = write.getIncludedColumns();
+        logger.debug("The included columns is {}", includedColumns); 
         RecordsForTable recordMaker = recordMakers.forTable(tableNumber, includedColumns, super::enqueueRecord);
         if (recordMaker != null) {
             List<Serializable[]> rows = write.getRows();
@@ -894,6 +912,7 @@ public class BinlogReader extends AbstractReader {
             int numRows = rows.size();
             source.setBinlogTimestampSeconds(event.getHeader().getTimestamp());
             if (startingRowNumber < numRows) {
+            	logger.debug("The number columns for row {}", rows.get(0).length);
                 for (int row = startingRowNumber; row != numRows; ++row) {
                 	// To get the timestamp from event header => event.getHeader().getTimestamp()
                     count += recordMaker.create(rows.get(row), ts, row, numRows);
@@ -1040,6 +1059,7 @@ public class BinlogReader extends AbstractReader {
         logger.debug("XA Prepare event: {}", event);
         // do nothing
     }
+    
 
     protected static SSLMode sslModeFor(SecureConnectionMode mode) {
         switch (mode) {

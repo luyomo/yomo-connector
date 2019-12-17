@@ -5,18 +5,19 @@
  */
 package io.debezium.connector.maria;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
@@ -43,6 +44,7 @@ import io.debezium.jdbc.JdbcValueConverters;
 import io.debezium.jdbc.TemporalPrecisionMode;
 import io.debezium.relational.Column;
 import io.debezium.relational.ValueConverter;
+import io.debezium.time.Conversions;
 import io.debezium.time.Year;
 import io.debezium.util.Strings;
 
@@ -279,7 +281,8 @@ public class MySqlValueConverters extends JdbcValueConverters {
                     return data -> convertDurationToMicroseconds(column, fieldDefn, data);
                 }
             case Types.TIMESTAMP:
-                return ((ValueConverter) (data -> convertTimestampToLocalDateTime(column, fieldDefn, data))).and(super.converter(column, fieldDefn));
+            	return                   (data) -> convertTimestampToLocalDateTime(column, fieldDefn, data);
+            	
             default:
                 break;
         }
@@ -287,7 +290,7 @@ public class MySqlValueConverters extends JdbcValueConverters {
         // Otherwise, let the base class handle it ...
         return super.converter(column, fieldDefn);
     }
-
+    
     /**
      * Return the {@link Charset} instance with the MySQL-specific character set name used by the given column.
      *
@@ -714,15 +717,74 @@ public class MySqlValueConverters extends JdbcValueConverters {
     }
 
     protected Object convertTimestampToLocalDateTime(Column column, Field fieldDefn, Object data) {
-        if (data == null && !fieldDefn.schema().isOptional()) {
+    	String BASE_TIME = "2262-04-11 23:47:16.854775807";
+    	String EPOCH_START_TIME="1970-01-01 01:00:00.000000000";
+    	DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSSSSS");
+        if (data == null && fieldDefn.schema().isOptional()) {
             return null;
         }
-        if (!(data instanceof Timestamp)) {
-            return data;
+        // In the mariadb's replication, [0000-00-00 00:00:00] is taken as null while it's value in the maraidb[
+        if (data == null && !fieldDefn.schema().isOptional()) {
+            data = LocalDateTime.parse(EPOCH_START_TIME, formatter);
         }
-
-        return ((Timestamp) data).toLocalDateTime();
+        
+        if (adaptiveTimePrecisionMode || adaptiveTimeMicrosecondsPrecisionMode) {
+        	
+        	
+        	LocalDateTime localData = null;
+        	
+        	logger.debug("data type is LocalDateTime: {}", data instanceof LocalDateTime);
+        	logger.debug("data type is LocalDateTime: {}", data instanceof Timestamp);
+        	
+        	if(data instanceof Timestamp) {
+        		localData = ((Timestamp)data).toLocalDateTime();
+        		logger.debug("data type is LocalDateTime: {}",((Timestamp)data).toInstant() );
+        	}else {
+        		localData = (LocalDateTime)data;
+        	}
+        	if (localData.compareTo(LocalDateTime.parse(EPOCH_START_TIME, formatter)) < 0) {
+        		data = (LocalDateTime)LocalDateTime.parse(EPOCH_START_TIME, formatter);
+        		localData = (LocalDateTime)data;
+        		//return convertTimestampToEpochMillisAsDate(column, fieldDefn, (LocalDateTime)LocalDateTime.parse(EPOCH_START_TIME, formatter) );
+        	}
+        	if (getTimePrecision(column) <= 3) {
+        		if (localData.compareTo(LocalDateTime.parse(BASE_TIME, formatter)) > 0) {
+            		return localData.toInstant(ZoneOffset.UTC).toEpochMilli();
+            	}else {
+                    return convertTimestampToEpochMillis(column, fieldDefn, data);
+            	}
+        	}
+            if (getTimePrecision(column) <= 6) {
+            	if (localData.compareTo(LocalDateTime.parse(BASE_TIME, formatter)) > 0) {
+            		return Conversions.toEpochMicros(localData.toInstant(ZoneOffset.UTC));
+            	}else {
+            		return convertTimestampToEpochMicros(column, fieldDefn, data);
+            	}
+            }
+        }
+        return convertTimestampToEpochMillisAsDate(column, fieldDefn, data);
     }
+    
+	/*
+	 * public boolean isThisDateValid(String dateToValidate, String dateFromat){
+	 * 
+	 * if(dateToValidate == null){ return false; }
+	 * 
+	 * SimpleDateFormat sdf = new SimpleDateFormat(dateFromat);
+	 * sdf.setLenient(false);
+	 * 
+	 * try {
+	 * 
+	 * //if not valid, it will throw ParseException LocalDateTime date =
+	 * sdf.parse(dateToValidate); System.out.println(date);
+	 * 
+	 * } catch (ParseException e) {
+	 * 
+	 * e.printStackTrace(); return false; }
+	 * 
+	 * return true; }
+	 */
+
 
     public static Duration stringToDuration(String timeString) {
         Matcher matcher = TIME_FIELD_PATTERN.matcher(timeString);

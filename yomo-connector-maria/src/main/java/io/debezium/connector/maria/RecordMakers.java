@@ -287,17 +287,29 @@ public class RecordMakers {
         }
     }
     
-    private Long getNullFlag(Object[] _row) {
+    private String getNullFlag(Object[] _row) {
     	BitSet __bitSet = new BitSet(_row.length);
     	for(int __i=0; __i< _row.length; __i++) {
     		if(_row[__i] == null) __bitSet.set(__i);
     	}
     	logger.debug(__bitSet.toLongArray().toString());
     	
-    	if (__bitSet.toLongArray().length == 0)
-    		return (long)0;
-    	else
-    	    return __bitSet.toLongArray()[0];
+    	return __bitSet.toString();
+    }
+    
+    private Object[] fillNullColumn(Object[] _row, BitSet includedColumns, int _numCols) throws InterruptedException {
+    	String[] __arrBits = includedColumns.toString().replace("{", "").replace("}", "").split(",");
+
+    	Object[] __row = new Object[_numCols];
+    	
+    	if(_row.length != __arrBits.length) {
+    		logger.warn("The number of columns does not match the included column flag {} vs {}", _row.length, __arrBits.length);
+    	}
+    	
+    	for(int _idx =0; _idx < __arrBits.length; _idx++) {
+    		__row[Integer.parseInt(__arrBits[_idx].trim())] = _row[_idx];
+    	}
+    	return __row;
     }
 
     /**
@@ -351,7 +363,20 @@ public class RecordMakers {
             public int insert(SourceInfo source, Object[] row, int rowNumber, int numberOfRows, BitSet includedColumns, long ts,
                               BlockingConsumer<SourceRecord> consumer)
                     throws InterruptedException {
-                Object key = tableSchema.keyFromColumnData(row);
+            	if (row.length < tableSchema.valueSchema().fields().size()) {
+            		for(Object __obj : row) {
+                        logger.info("01. row data {}", __obj);
+                	}
+                	logger.info("The value schema is {}", tableSchema.valueSchema().fields().toString());
+                	logger.info("The includedColumns in the insert is {}", includedColumns );
+                	
+                	row = fillNullColumn(row, includedColumns, tableSchema.valueSchema().fields().size());
+                	logger.debug("row data after filling null: {}", row.toString());
+            	} else if (row.length > tableSchema.valueSchema().fields().size()) {
+            	    logger.warn("The columns are more than the schema definition");
+            	}
+            	
+            	Object key = tableSchema.keyFromColumnData(row);
                 Struct value = tableSchema.valueFromColumnData(row);
                 if (value != null || key != null) {
                     Schema keySchema = tableSchema.keySchema();
@@ -363,7 +388,7 @@ public class RecordMakers {
                             keySchema, key, envelope.schema(), envelope.create(value, origin, ts)
                             , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
                             , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )  // Added the timestamp of the transaction to header
-                              .addLong("null_bit_flag", getNullFlag(row))       //Get the Null flag for each items (Added by chou@20191119)
+                              .addString("null_bit_flag", getNullFlag(row))       //Get the Null flag for each items (Added by chou@20191119)
                     		); 
                     consumer.accept(record);
                     return 1;
@@ -376,7 +401,19 @@ public class RecordMakers {
                               long ts,
                               BlockingConsumer<SourceRecord> consumer)
                     throws InterruptedException {
-                int count = 0;
+            	if (after.length < tableSchema.valueSchema().fields().size()) {
+            		for(Object __obj : after) {
+                        logger.info("01. row data {}", __obj);
+                	}
+                	logger.info("The value schema is {}", tableSchema.valueSchema().fields().toString());
+                	logger.info("The includedColumns in the insert is {}", includedColumns );
+                	
+                	after = fillNullColumn(after, includedColumns, tableSchema.valueSchema().fields().size());
+                	logger.debug("row data after filling null: {}", after.toString());
+            	} else if (after.length > tableSchema.valueSchema().fields().size()) {
+            	    logger.warn("The columns are more than the schema definition");
+            	}
+            	int count = 0;
                 Object key = tableSchema.keyFromColumnData(after);
                 Struct valueAfter = tableSchema.valueFromColumnData(after);
                 if (valueAfter != null || key != null) {
@@ -394,7 +431,7 @@ public class RecordMakers {
                                 keySchema, oldKey, envelope.schema(), envelope.delete(valueBefore, origin, ts)
                                 , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
                                 , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )  // Added the timestamp of the transaction to header
-                                  .addLong("null_bit_flag", getNullFlag(after))//Get the Null flag for each items (Added by chou@20191119)
+                                  .addString("null_bit_flag", getNullFlag(after))//Get the Null flag for each items (Added by chou@20191119)
                         		);
 
                         consumer.accept(record);
@@ -405,7 +442,7 @@ public class RecordMakers {
                             record = new SourceRecord(partition, getSourceRecordOffset(offset), topicName, partitionNum, keySchema, oldKey, null, null
                             		, source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
                                     , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )  // Added the timestamp of the transaction to header
-                                      .addLong("null_bit_flag", getNullFlag(after))  //Get the Null flag for each items (Added by chou@20191119)
+                                      .addString("null_bit_flag", getNullFlag(after))  //Get the Null flag for each items (Added by chou@20191119)
                             		);
                             consumer.accept(record);
                             ++count;
@@ -416,7 +453,7 @@ public class RecordMakers {
                                 keySchema, key, envelope.schema(), envelope.create(valueAfter, origin, ts)
                                 , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
                                 , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )// Added the timestamp of the transaction to header
-                                  .addLong("null_bit_flag", getNullFlag(after))  //Get the Null flag for each items (Added by chou@20191119)
+                                  .addString("null_bit_flag", getNullFlag(after))  //Get the Null flag for each items (Added by chou@20191119)
                         		);
 
                         consumer.accept(record);
@@ -427,7 +464,7 @@ public class RecordMakers {
                                 keySchema, key, envelope.schema(), envelope.update(valueBefore, valueAfter, origin, ts)
                                 , source.getBinlogTimestampSeconds()    // Added the timestamp of the transaction
                                 , (new ConnectHeaders()).addLong("tx_ms", source.getBinlogTimestampSeconds() )  // Added the timestamp of the transaction to header
-                                .addLong("null_bit_flag", getNullFlag(after))  //Get the Null flag for each items (Added by chou@20191119)
+                                .addString("null_bit_flag", getNullFlag(after))  //Get the Null flag for each items (Added by chou@20191119)
                         		);
 
                         consumer.accept(record);
@@ -442,6 +479,18 @@ public class RecordMakers {
                               BlockingConsumer<SourceRecord> consumer)
                     throws InterruptedException {
                 int count = 0;
+                if (row.length < tableSchema.valueSchema().fields().size()) {
+            		for(Object __obj : row) {
+                        logger.info("01. row data {}", __obj);
+                	}
+                	logger.info("The value schema is {}", tableSchema.valueSchema().fields().toString());
+                	logger.info("The includedColumns in the insert is {}", includedColumns );
+                	
+                	row = fillNullColumn(row, includedColumns, tableSchema.valueSchema().fields().size());
+                	logger.debug("row data after filling null: {}", row.toString());
+            	} else if (row.length > tableSchema.valueSchema().fields().size()) {
+            	    logger.warn("The columns are more than the schema definition");
+            	}
                 Object key = tableSchema.keyFromColumnData(row);
                 Struct value = tableSchema.valueFromColumnData(row);
                 if (value != null || key != null) {
